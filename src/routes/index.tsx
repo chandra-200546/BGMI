@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import type { FormEvent } from "react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/")({
@@ -22,6 +23,62 @@ export const Route = createFileRoute("/")({
   }),
   component: KosLanding,
 });
+
+type LanguageCode = "en" | "hi" | "kn";
+
+const languageOptions: Array<{ code: LanguageCode; label: string; short: string }> = [
+  { code: "en", label: "English", short: "EN" },
+  { code: "hi", label: "हिन्दी", short: "हि" },
+  { code: "kn", label: "ಕನ್ನಡ", short: "ಕ" },
+];
+
+const heroCopy: Record<
+  LanguageCode,
+  {
+    kicker: string;
+    titleStart: string;
+    titleHighlight: string;
+    body: string;
+    note: string;
+    primaryCta: string;
+    secondaryCta: string;
+    meta: string;
+  }
+> = {
+  en: {
+    kicker: "A travel app for the India you haven't seen",
+    titleStart: "Find what's",
+    titleHighlight: "past the milestone.",
+    body:
+      "The same 50 places keep showing up on every travel app. Kos maps the rest — villages, valleys, forts, waterfalls, heritage towns — and sorts them by how far they are from wherever you're standing right now.",
+    note: "कोस · the old Indian unit of distance. The kos minar marked the road. We're marking what's beyond it.",
+    primaryCta: "Explore near me →",
+    secondaryCta: "How it works",
+    meta: "Free · Works offline soon · English · हिन्दी · ಕನ್ನಡ",
+  },
+  hi: {
+    kicker: "उस भारत के लिए यात्रा ऐप जिसे आपने अभी तक नहीं देखा",
+    titleStart: "मील के पत्थर के",
+    titleHighlight: "आगे क्या है खोजें.",
+    body:
+      "हर ट्रैवल ऐप पर वही 50 जगहें दिखती हैं। Kos बाकी जगहें दिखाता है — गांव, घाटियां, किले, झरने और विरासत शहर — और उन्हें आपकी मौजूदा जगह से दूरी के हिसाब से सजाता है।",
+    note: "कोस · दूरी की पुरानी भारतीय इकाई। कोस मीनार रास्ता बताती थी। हम उसके आगे की जगहें दिखा रहे हैं।",
+    primaryCta: "मेरे पास खोजें →",
+    secondaryCta: "यह कैसे काम करता है",
+    meta: "मुफ्त · ऑफलाइन जल्द · English · हिन्दी · ಕನ್ನಡ",
+  },
+  kn: {
+    kicker: "ನೀವು ಇನ್ನೂ ನೋಡದ ಭಾರತದಿಗಾಗಿ ಪ್ರಯಾಣ ಆಪ್",
+    titleStart: "ಮೈಲಿಗಲ್ಲಿನ",
+    titleHighlight: "ಆಚೆಗೆ ಇರುವುದನ್ನು ಹುಡುಕಿ.",
+    body:
+      "ಪ್ರತಿ ಪ್ರಯಾಣ ಆಪ್‌ನಲ್ಲೂ ಅದೇ 50 ಸ್ಥಳಗಳು ಕಾಣಿಸುತ್ತವೆ. Kos ಉಳಿದ ಸ್ಥಳಗಳನ್ನು ತೋರಿಸುತ್ತದೆ — ಹಳ್ಳಿಗಳು, ಕಣಿವೆಗಳು, ಕೋಟೆಗಳು, ಜಲಪಾತಗಳು, ಪಾರಂಪರಿಕ ಪಟ್ಟಣಗಳು — ಮತ್ತು ನೀವು ಇರುವ ಸ್ಥಳದಿಂದ ದೂರದ ಪ್ರಕಾರ ಅವುಗಳನ್ನು ಸರಿಸುತ್ತದೆ.",
+    note: "ಕೋಸ · ದೂರದ ಹಳೆಯ ಭಾರತೀಯ ಅಳತೆ. ಕೋಸ ಮಿನಾರ್ ದಾರಿಗೆ ಗುರುತು. ನಾವು ಅದರಾಚೆಯ ಸ್ಥಳಗಳನ್ನು ಗುರುತಿಸುತ್ತಿದ್ದೇವೆ.",
+    primaryCta: "ನನ್ನ ಹತ್ತಿರ ಅನ್ವೇಷಿಸಿ →",
+    secondaryCta: "ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ",
+    meta: "ಉಚಿತ · ಆಫ್‌ಲೈನ್ ಶೀಘ್ರದಲ್ಲೇ · English · हिन्दी · ಕನ್ನಡ",
+  },
+};
 
 /* --- Building blocks --- */
 
@@ -58,7 +115,13 @@ function KosMark({ className = "" }: { className?: string }) {
 
 /* --- Sections --- */
 
-function Nav() {
+function Nav({
+  activeLanguage,
+  onLanguageChange,
+}: {
+  activeLanguage: LanguageCode;
+  onLanguageChange: (language: LanguageCode) => void;
+}) {
   return (
     <header className="sticky top-0 z-40 border-b border-[color:var(--color-indigo)]/15 bg-[color:var(--color-cream)]/85 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center gap-6 px-5 py-3">
@@ -86,10 +149,26 @@ function Nav() {
               {label}
             </a>
           ))}
-          <div className="flex gap-1 font-mono text-[0.65rem] font-medium">
-            <span className="rounded-sm bg-[color:var(--color-indigo)] px-1.5 py-0.5 text-[color:var(--color-cream)]">EN</span>
-            <span className="px-1.5 py-0.5 text-[color:var(--color-indigo)]/60">हि</span>
-            <span className="px-1.5 py-0.5 text-[color:var(--color-indigo)]/60">ಕ</span>
+          <div className="flex gap-1 font-mono text-[0.65rem] font-medium" aria-label="Choose language">
+            {languageOptions.map((language) => {
+              const isActive = language.code === activeLanguage;
+              return (
+                <button
+                  key={language.code}
+                  type="button"
+                  onClick={() => onLanguageChange(language.code)}
+                  aria-pressed={isActive}
+                  className={
+                    isActive
+                      ? "rounded-sm bg-[color:var(--color-indigo)] px-1.5 py-0.5 text-[color:var(--color-cream)]"
+                      : "rounded-sm px-1.5 py-0.5 text-[color:var(--color-indigo)]/60 hover:bg-[color:var(--color-indigo)]/10 hover:text-[color:var(--color-indigo)]"
+                  }
+                >
+                  <span className="sr-only">{language.label}</span>
+                  {language.short}
+                </button>
+              );
+            })}
           </div>
         </nav>
         <a href="#get" className="btn-vermillion text-sm">
@@ -100,19 +179,21 @@ function Nav() {
   );
 }
 
-function Hero() {
+function Hero({ activeLanguage }: { activeLanguage: LanguageCode }) {
+  const copy = heroCopy[activeLanguage];
+
   return (
     <section id="top" className="paper-grain relative overflow-hidden">
       <div className="mx-auto max-w-6xl px-5 pt-16 pb-24 md:pt-24 md:pb-32">
         <div className="max-w-3xl">
           <div className="flex items-center gap-3">
-            <span className="section-label">A travel app for the India you haven't seen</span>
+            <span className="section-label">{copy.kicker}</span>
           </div>
 
           <h1 className="mt-6 font-display text-5xl leading-[1.05] text-[color:var(--color-indigo)] md:text-7xl">
-            Find what's{" "}
+            {copy.titleStart}{" "}
             <span className="relative inline-block">
-              <span className="relative z-10">past the milestone.</span>
+              <span className="relative z-10">{copy.titleHighlight}</span>
               <span
                 aria-hidden
                 className="absolute inset-x-0 bottom-1 -z-0 h-3 bg-[color:var(--color-marigold)]/70 md:h-4"
@@ -121,28 +202,24 @@ function Hero() {
           </h1>
 
           <p className="mt-8 max-w-2xl text-lg leading-relaxed text-[color:var(--color-indigo)]/85">
-            The same 50 places keep showing up on every travel app. Kos maps
-            the rest — villages, valleys, forts, waterfalls, heritage towns —
-            and sorts them by how far they are from wherever you're standing
-            right now.
+            {copy.body}
           </p>
 
           <p className="mt-4 max-w-2xl font-mono text-sm text-[color:var(--color-indigo)]/70">
-            कोस · the old Indian unit of distance. The kos minar marked the
-            road. We're marking what's beyond it.
+            {copy.note}
           </p>
 
           <div className="mt-10 flex flex-wrap items-center gap-4">
             <a href="#get" className="btn-vermillion">
-              Explore near me →
+              {copy.primaryCta}
             </a>
             <a href="#how" className="btn-outline-indigo">
-              How it works
+              {copy.secondaryCta}
             </a>
           </div>
 
           <div className="mt-6 font-mono text-xs text-[color:var(--color-indigo)]/60">
-            Free · Works offline soon · English · हिन्दी · ಕನ್ನಡ
+            {copy.meta}
           </div>
         </div>
 
@@ -345,11 +422,17 @@ function Discover() {
   );
 }
 
-function Languages() {
+function Languages({
+  activeLanguage,
+  onLanguageChange,
+}: {
+  activeLanguage: LanguageCode;
+  onLanguageChange: (language: LanguageCode) => void;
+}) {
   const samples = [
-    { code: "EN", title: "English", head: "Places near you", body: "51 hand-picked spots across Karnataka, sorted by live distance." },
-    { code: "हि", title: "हिन्दी", head: "आपके पास की जगहें", body: "कर्नाटक भर की ५१ चुनी हुई जगहें, आपकी दूरी के हिसाब से।" },
-    { code: "ಕ", title: "ಕನ್ನಡ", head: "ನಿಮ್ಮ ಹತ್ತಿರದ ಸ್ಥಳಗಳು", body: "ಕರ್ನಾಟಕದಾದ್ಯಂತ ೫೧ ಆಯ್ದ ಸ್ಥಳಗಳು, ನಿಮ್ಮ ದೂರದ ಪ್ರಕಾರ." },
+    { lang: "en" as const, code: "EN", title: "English", head: "Places near you", body: "51 hand-picked spots across Karnataka, sorted by live distance." },
+    { lang: "hi" as const, code: "हि", title: "हिन्दी", head: "आपके पास की जगहें", body: "कर्नाटक भर की ५१ चुनी हुई जगहें, आपकी दूरी के हिसाब से।" },
+    { lang: "kn" as const, code: "ಕ", title: "ಕನ್ನಡ", head: "ನಿಮ್ಮ ಹತ್ತಿರದ ಸ್ಥಳಗಳು", body: "ಕರ್ನಾಟಕದಾದ್ಯಂತ ೫೧ ಆಯ್ದ ಸ್ಥಳಗಳು, ನಿಮ್ಮ ದೂರದ ಪ್ರಕಾರ." },
   ];
   return (
     <section id="languages" className="indigo-grain text-[color:var(--color-cream)]">
@@ -367,9 +450,16 @@ function Languages() {
 
         <div className="mt-12 grid gap-5 md:grid-cols-3">
           {samples.map((s) => (
-            <div
+            <button
               key={s.code}
-              className="border border-[color:var(--color-marigold)]/40 bg-[color:var(--color-indigo-soft)]/60 p-6"
+              type="button"
+              onClick={() => onLanguageChange(s.lang)}
+              aria-pressed={activeLanguage === s.lang}
+              className={`border p-6 text-left transition-colors ${
+                activeLanguage === s.lang
+                  ? "border-[color:var(--color-marigold)] bg-[color:var(--color-marigold)]/15"
+                  : "border-[color:var(--color-marigold)]/40 bg-[color:var(--color-indigo-soft)]/60 hover:border-[color:var(--color-marigold)]"
+              }`}
             >
               <div className="flex items-center gap-3">
                 <span className="grid h-9 w-9 shrink-0 place-items-center rounded-sm bg-[color:var(--color-marigold)] font-mono text-sm font-semibold text-[color:var(--color-indigo)]">
@@ -383,7 +473,7 @@ function Languages() {
                 {s.head}
               </div>
               <p className="mt-2 text-sm text-[color:var(--color-cream)]/80">{s.body}</p>
-            </div>
+            </button>
           ))}
         </div>
       </div>
@@ -483,7 +573,35 @@ function Who() {
 }
 
 function GetTheApp() {
-  const [status, setStatus] = useState<"idle" | "submitting" | "sent">("idle");
+  const [status, setStatus] = useState<"idle" | "submitting" | "sent" | "error">("idle");
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setStatus("submitting");
+
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+
+    try {
+      const response = await fetch("https://formspree.io/f/mgognqlb", {
+        method: "POST",
+        body: formData,
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Formspree submission failed");
+      }
+
+      form.reset();
+      setStatus("sent");
+    } catch {
+      setStatus("error");
+    }
+  }
+
   return (
     <section id="get" className="indigo-grain text-[color:var(--color-cream)]">
       <div className="mx-auto max-w-6xl px-5 py-24">
@@ -516,13 +634,12 @@ function GetTheApp() {
           </div>
 
           <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              setStatus("submitting");
-              setTimeout(() => setStatus("sent"), 600);
-            }}
+            action="https://formspree.io/f/mgognqlb"
+            method="POST"
+            onSubmit={handleSubmit}
             className="rounded-md border border-[color:var(--color-marigold)]/50 bg-[color:var(--color-indigo-soft)]/70 p-6 md:p-8"
           >
+            <input type="hidden" name="_subject" value="New Kos launch notification signup" />
             <div className="font-display text-2xl text-[color:var(--color-marigold)]">
               Get notified when we launch in your state.
             </div>
@@ -557,17 +674,21 @@ function GetTheApp() {
             </div>
             <button
               type="submit"
-              disabled={status !== "idle"}
+              disabled={status === "submitting" || status === "sent"}
               className="btn-vermillion mt-8 w-full disabled:opacity-60"
             >
               {status === "sent"
                 ? "Got it — thanks ✓"
+                : status === "error"
+                  ? "Try again →"
                 : status === "submitting"
                   ? "Sending…"
                   : "Keep me posted →"}
             </button>
             <p className="mt-4 font-mono text-[0.62rem] uppercase tracking-widest text-[color:var(--color-cream)]/50">
-              Placeholder form — hook up to your mailer before launch.
+              {status === "error"
+                ? "Something went wrong. Please try again."
+                : "Submissions go straight to the Kos Formspree inbox."}
             </p>
           </form>
         </div>
@@ -605,14 +726,16 @@ function Footer() {
 }
 
 function KosLanding() {
+  const [activeLanguage, setActiveLanguage] = useState<LanguageCode>("en");
+
   return (
-    <div className="min-h-screen">
-      <Nav />
+    <div className="min-h-screen" lang={activeLanguage}>
+      <Nav activeLanguage={activeLanguage} onLanguageChange={setActiveLanguage} />
       <main>
-        <Hero />
+        <Hero activeLanguage={activeLanguage} />
         <HowItWorks />
         <Discover />
-        <Languages />
+        <Languages activeLanguage={activeLanguage} onLanguageChange={setActiveLanguage} />
         <Coverage />
         <Who />
         <GetTheApp />
