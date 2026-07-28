@@ -126,7 +126,7 @@ function supabaseStatus(status: string, registered: number, maxTeams: number): S
 
 async function supabaseGet<T>(path: string): Promise<T[]> {
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY;
+  const key = process.env.SUPABASE_ANON_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return [];
 
   const response = await fetch(`${url.replace(/\/$/, "")}/rest/v1/${path}`, {
