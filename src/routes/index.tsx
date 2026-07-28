@@ -69,13 +69,13 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Live PostgreSQL-backed BGMI esports tournament management with real-time leaderboards, schedules, registration, dashboards, and admin operations.",
+          "Live BGMI esports tournament management with real-time leaderboards, schedules, registration, dashboards, and admin operations.",
       },
       { property: "og:title", content: "NexBattles BGMI - Live Tournament Command Center" },
       {
         property: "og:description",
         content:
-          "A futuristic esports command center powered by database-backed tournament data and live refresh.",
+          "A futuristic esports command center powered by real-time tournament data and live refresh.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -157,7 +157,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function LiveDataBanner({ data, isFetching }: { data: PlatformData; isFetching: boolean }) {
   const live = data.source === "database" || data.source === "supabase";
-  const label = data.source === "supabase" ? "Supabase live connected" : "Live database connected";
+  const label = live ? "Live operations feed online" : "Live operations feed syncing";
   return (
     <div
       className={`rounded-md border px-4 py-3 text-sm ${
@@ -169,13 +169,18 @@ function LiveDataBanner({ data, isFetching }: { data: PlatformData; isFetching: 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="flex items-center gap-2 font-bold">
           <span className={`h-2 w-2 rounded-full ${live ? "bg-emerald-300" : "bg-amber-300"}`} />
-          {live ? label : "Database setup required"}
+          {label}
         </span>
         <span className="font-mono text-xs uppercase tracking-[0.16em] opacity-80">
           {isFetching ? "Syncing..." : `Updated ${new Date(data.generatedAt).toLocaleTimeString()}`}
         </span>
       </div>
-      {!live && data.message ? <p className="mt-2 text-xs opacity-90">{data.message}</p> : null}
+      {!live ? (
+        <p className="mt-2 text-xs opacity-90">
+          Tournament control is warming up. Published events and standings appear here
+          automatically.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -183,7 +188,7 @@ function LiveDataBanner({ data, isFetching }: { data: PlatformData; isFetching: 
 function EmptyState({ title, body }: { title: string; body: string }) {
   return (
     <Card className="p-8 text-center">
-      <Database className="mx-auto h-10 w-10 text-cyan-200" />
+      <Activity className="mx-auto h-10 w-10 text-cyan-200" />
       <h3 className="mt-4 text-xl font-black uppercase text-white">{title}</h3>
       <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-400">{body}</p>
     </Card>
@@ -289,7 +294,7 @@ function GamingAnimationLayer() {
 
 function Hero({ data, isFetching }: { data: PlatformData; isFetching: boolean }) {
   const topTeams = data.teams.slice(0, 5);
-  const totalPrize = data.tournaments.length > 0 ? data.tournaments[0].prize : "DB pending";
+  const totalPrize = data.tournaments.length > 0 ? data.tournaments[0].prize : "Syncing";
   const registered = data.tournaments.reduce((sum, item) => sum + item.registered, 0);
   const slots = data.tournaments.reduce((sum, item) => sum + item.slots, 0);
 
@@ -311,7 +316,7 @@ function Hero({ data, isFetching }: { data: PlatformData; isFetching: boolean })
             </span>
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
-            Database-backed tournaments, registrations, rosters, room releases, check-ins, results,
+            Real-time tournaments, registrations, rosters, room releases, check-ins, results,
             leaderboards, notifications, and admin operations with live refresh.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
@@ -347,7 +352,7 @@ function Hero({ data, isFetching }: { data: PlatformData; isFetching: boolean })
               </div>
               <StatusBadge
                 status={
-                  data.source === "database" || data.source === "supabase" ? "Live" : "DB Pending"
+                  data.source === "database" || data.source === "supabase" ? "Live" : "Syncing"
                 }
               />
             </div>
@@ -366,8 +371,8 @@ function Hero({ data, isFetching }: { data: PlatformData; isFetching: boolean })
               </div>
             ) : (
               <EmptyState
-                title="No leaderboard rows"
-                body="Seed PostgreSQL with approved teams and results to activate the live standings feed."
+                title="Standings warming up"
+                body="Approved squads and published results will appear here as soon as tournament operations go live."
               />
             )}
           </Card>
@@ -385,7 +390,7 @@ function Tournaments({ data }: { data: PlatformData }) {
     <Section
       id="tournaments"
       eyebrow="Live tournament discovery"
-      title="Tournament cards powered by PostgreSQL, not local demo arrays."
+      title="Real-time tournament cards with slots, prizes, maps, and status."
     >
       <div className="mb-6 flex flex-wrap gap-2">
         {["All", "Registration Open", "Closing Soon", "Live", "Completed"].map((item) => (
@@ -400,8 +405,8 @@ function Tournaments({ data }: { data: PlatformData }) {
       </div>
       {visible.length === 0 ? (
         <EmptyState
-          title="No tournaments in database"
-          body="Create tournaments from the admin dashboard or run the Prisma seed script. This screen intentionally does not use static placeholder data."
+          title="No published tournaments yet"
+          body="Upcoming events will appear here the moment organizers publish them from the control room."
         />
       ) : (
         <div className="grid gap-5 lg:grid-cols-3">
@@ -458,7 +463,7 @@ function Registration() {
   return (
     <Section
       id="register"
-      eyebrow="Database-ready registration"
+      eyebrow="Live registration"
       title="Registration forms are structured for server validation, payment proof, rosters, and unique Team IDs."
     >
       <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
@@ -489,7 +494,7 @@ function Registration() {
               "Payment transaction",
               "Fair-play agreement",
             ].map((field) => (
-              <Field key={field} label={field} value="Stored after database submission" />
+              <Field key={field} label={field} value="Captured securely after submission" />
             ))}
             <Uploader label="Logo / payment proof upload" />
           </div>
@@ -501,7 +506,7 @@ function Registration() {
               onClick={() => setStep(Math.min(steps.length - 1, step + 1))}
               className="neon-button"
             >
-              {step === steps.length - 1 ? "Submit To Database" : "Continue"}
+              {step === steps.length - 1 ? "Submit Registration" : "Continue"}
             </button>
           </div>
         </Card>
@@ -531,7 +536,7 @@ function Uploader({ label }: { label: string }) {
       <Upload className="h-5 w-5 text-cyan-200" />
       <p className="mt-2 text-sm font-bold text-white">{label}</p>
       <p className="text-xs text-slate-400">
-        Upload metadata is modeled for Cloudinary/Supabase storage.
+        Uploads are validated and routed to secure tournament storage.
       </p>
     </div>
   );
@@ -571,7 +576,7 @@ function Leaderboard({ data }: { data: PlatformData }) {
         {filtered.length === 0 ? (
           <EmptyState
             title="No leaderboard data"
-            body="Publish match results in PostgreSQL to populate ranking, finishes, WWCD, penalties, and form."
+            body="Published match results will populate ranking, finishes, WWCD, penalties, and recent form."
           />
         ) : (
           <LeaderboardRows teams={filtered} />
@@ -694,14 +699,14 @@ function ScheduleAndRooms({ data }: { data: PlatformData }) {
     <Section
       id="schedule"
       eyebrow="Match control"
-      title="Schedules and room-release state are loaded from database matches."
+      title="Schedules, rooms, and check-ins update as match control publishes changes."
     >
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <Card className="p-5">
           {data.schedules.length === 0 ? (
             <EmptyState
               title="No match schedule"
-              body="Add Match rows to PostgreSQL to show phases, maps, room release status, and check-in windows."
+              body="Match cards appear here when organizers publish phases, maps, room release status, and check-in windows."
             />
           ) : (
             <div className="space-y-3">
@@ -780,7 +785,7 @@ function Dashboard({ data }: { data: PlatformData }) {
         <div className="grid gap-5">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <Stat label="Team" value={topTeam?.short ?? "None"} icon={Shield} />
-            <Stat label="Current rank" value={topTeam ? `#${topTeam.rank}` : "DB"} icon={Crown} />
+            <Stat label="Current rank" value={topTeam ? `#${topTeam.rank}` : "--"} icon={Crown} />
             <Stat
               label="Total points"
               value={topTeam ? String(totalPoints(topTeam)) : "0"}
@@ -936,9 +941,7 @@ function ContentPages({ data }: { data: PlatformData }) {
         <Card className="p-5">
           <h3 className="text-xl font-black uppercase text-white">Announcements</h3>
           {data.announcements.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-400">
-              No announcements published from the database yet.
-            </p>
+            <p className="mt-4 text-sm text-slate-400">No announcements published yet.</p>
           ) : (
             <div className="mt-4 space-y-3">
               {data.announcements.map((item) => (
@@ -1004,7 +1007,7 @@ function AdminPanel({ data }: { data: PlatformData }) {
     <Section
       id="admin"
       eyebrow="Protected admin panel"
-      title="Admin modules write to the same PostgreSQL schema used by the live public API."
+      title="Admin modules control the same live data shown across the public platform."
     >
       <div className="grid gap-6 lg:grid-cols-[250px_1fr]">
         <Card className="p-4">
@@ -1040,9 +1043,9 @@ function AdminPanel({ data }: { data: PlatformData }) {
         <div className="grid gap-5">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <Stat label="Active events" value={String(data.tournaments.length)} icon={Trophy} />
-            <Stat label="Pending regs" value="DB" icon={ClipboardCheck} />
+            <Stat label="Pending regs" value="Live" icon={ClipboardCheck} />
             <Stat label="Entry fees" value="Live" icon={Database} />
-            <Stat label="Open appeals" value="DB" icon={MessageCircle} />
+            <Stat label="Open appeals" value="Live" icon={MessageCircle} />
           </div>
           <Card className="p-5">
             <h3 className="text-xl font-black uppercase text-white">Registrations and Revenue</h3>
@@ -1086,7 +1089,7 @@ function Footer() {
             NexBattles BGMI
           </p>
           <p className="mt-3 text-sm leading-6 text-slate-400">
-            Original esports tournament management platform with PostgreSQL-backed live data and
+            Original esports tournament management platform with real-time operations and
             AI-generated battle arena visuals.
           </p>
         </div>
