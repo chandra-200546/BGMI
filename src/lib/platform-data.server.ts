@@ -26,6 +26,54 @@ const accentClasses = [
   "from-emerald-300 to-cyan-400",
 ];
 
+type SupabaseTournament = {
+  id: string;
+  name: string;
+  mode: string;
+  status: string;
+  prize_pool: number;
+  entry_fee: number;
+  max_teams: number;
+  registered_teams: number;
+  starts_at: string;
+  registration_deadline: string;
+  maps: string[] | string | null;
+  phase: string | null;
+  accent: string | null;
+};
+
+type SupabaseTeam = {
+  id: string;
+  name: string;
+  short_name: string;
+  region: string;
+  captain: string;
+  matches_played: number;
+  wwcd: number;
+  placement_points: number;
+  finishes: number;
+  penalty_points: number;
+  recent_form: string[] | string | null;
+  preferred_drop: string | null;
+};
+
+type SupabaseMatch = {
+  id: string;
+  name: string;
+  starts_at: string;
+  map: string;
+  status: string;
+  group_name: string;
+};
+
+type SupabaseAnnouncement = {
+  id: string;
+  category: string;
+  title: string;
+  pinned: boolean;
+  publish_at: string;
+};
+
 function formatCurrency(value: number) {
   if (value === 0) return "Free";
   return new Intl.NumberFormat("en-IN", {
@@ -50,6 +98,129 @@ function formatTime(value?: Date | null) {
     hour: "numeric",
     minute: "2-digit",
   }).format(value);
+}
+
+function parseList(value: string[] | string | null | undefined) {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed) ? parsed.map(String) : value.split(",").map((item) => item.trim());
+  } catch {
+    return value.split(",").map((item) => item.trim());
+  }
+}
+
+function supabaseStatus(status: string, registered: number, maxTeams: number): Status {
+  if (registered >= maxTeams) return "Full";
+  const normalized = status.toUpperCase().replaceAll(" ", "_");
+  if (normalized === "LIVE") return "Live";
+  if (normalized === "COMPLETED") return "Completed";
+  if (normalized === "REGISTRATION_OPEN") {
+    return maxTeams - registered <= Math.max(3, Math.ceil(maxTeams * 0.1))
+      ? "Closing Soon"
+      : "Registration Open";
+  }
+  return "Completed";
+}
+
+async function supabaseGet<T>(path: string): Promise<T[]> {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY;
+  if (!url || !key) return [];
+
+  const response = await fetch(`${url.replace(/\/$/, "")}/rest/v1/${path}`, {
+    headers: {
+      apikey: key,
+      authorization: `Bearer ${key}`,
+      accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Supabase REST request failed for ${path}: ${response.status}`);
+  }
+
+  return (await response.json()) as T[];
+}
+
+async function getSupabasePlatformData(): Promise<PlatformData | undefined> {
+  if (
+    !process.env.SUPABASE_URL ||
+    !(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)
+  ) {
+    return undefined;
+  }
+
+  const [tournamentRows, teamRows, matchRows, announcementRows] = await Promise.all([
+    supabaseGet<SupabaseTournament>("tournaments?select=*&order=starts_at.asc"),
+    supabaseGet<SupabaseTeam>(
+      "teams?select=*&order=placement_points.desc&order=wwcd.desc&order=finishes.desc",
+    ),
+    supabaseGet<SupabaseMatch>("matches?select=*&order=starts_at.asc"),
+    supabaseGet<SupabaseAnnouncement>(
+      "announcements?select=*&order=pinned.desc&order=publish_at.desc",
+    ),
+  ]);
+
+  const tournaments: Tournament[] = tournamentRows.map((row, index) => ({
+    id: row.id,
+    name: row.name,
+    mode: row.mode,
+    status: supabaseStatus(row.status, row.registered_teams, row.max_teams),
+    prize: formatCurrency(row.prize_pool),
+    fee: formatCurrency(row.entry_fee),
+    slots: row.max_teams,
+    registered: row.registered_teams,
+    starts: formatDate(new Date(row.starts_at)),
+    deadline: formatDate(new Date(row.registration_deadline)),
+    map: parseList(row.maps).join(", "),
+    phase: row.phase ?? "League",
+    accent: row.accent ?? accentClasses[index % accentClasses.length],
+  }));
+
+  const teams: Team[] = teamRows.map((row, index) => ({
+    rank: index + 1,
+    name: row.name,
+    short: row.short_name,
+    region: row.region,
+    captain: row.captain,
+    matches: row.matches_played,
+    wwcd: row.wwcd,
+    placement: row.placement_points,
+    finishes: row.finishes,
+    penalty: row.penalty_points,
+    form: parseList(row.recent_form),
+    drop: row.preferred_drop ?? "TBA",
+  }));
+
+  const schedules: ScheduleItem[] = matchRows.map((row) => ({
+    match: row.name,
+    date: formatDate(new Date(row.starts_at)),
+    time: formatTime(new Date(row.starts_at)),
+    map: row.map,
+    status: row.status
+      .replaceAll("_", " ")
+      .toLowerCase()
+      .replace(/\b\w/g, (c) => c.toUpperCase()),
+    group: row.group_name,
+  }));
+
+  const announcements: AnnouncementItem[] = announcementRows.map((row) => ({
+    category: row.category,
+    title: row.title,
+    state: row.pinned ? "Pinned" : "Published",
+    date: formatDate(new Date(row.publish_at)),
+  }));
+
+  return {
+    tournaments,
+    teams,
+    schedules,
+    announcements,
+    generatedAt: new Date().toISOString(),
+    source: "supabase",
+  };
 }
 
 function tournamentStatus(status: TournamentStatus, registered: number, maxTeams: number): Status {
@@ -87,6 +258,23 @@ function mapTournament(
 }
 
 export async function getPlatformData(): Promise<PlatformData> {
+  try {
+    const supabaseData = await getSupabasePlatformData();
+    if (supabaseData) return supabaseData;
+  } catch (error) {
+    console.error(error);
+    return {
+      tournaments: [],
+      teams: [],
+      schedules: [],
+      announcements: [],
+      generatedAt: new Date().toISOString(),
+      source: "error",
+      message:
+        "Supabase is configured, but required REST tables are missing or blocked. Run supabase/schema.sql and seed data.",
+    };
+  }
+
   if (!process.env.DATABASE_URL) {
     return {
       tournaments: [],

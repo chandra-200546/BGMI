@@ -156,7 +156,8 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function LiveDataBanner({ data, isFetching }: { data: PlatformData; isFetching: boolean }) {
-  const live = data.source === "database";
+  const live = data.source === "database" || data.source === "supabase";
+  const label = data.source === "supabase" ? "Supabase live connected" : "Live database connected";
   return (
     <div
       className={`rounded-md border px-4 py-3 text-sm ${
@@ -168,7 +169,7 @@ function LiveDataBanner({ data, isFetching }: { data: PlatformData; isFetching: 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="flex items-center gap-2 font-bold">
           <span className={`h-2 w-2 rounded-full ${live ? "bg-emerald-300" : "bg-amber-300"}`} />
-          {live ? "Live database connected" : "Database setup required"}
+          {live ? label : "Database setup required"}
         </span>
         <span className="font-mono text-xs uppercase tracking-[0.16em] opacity-80">
           {isFetching ? "Syncing..." : `Updated ${new Date(data.generatedAt).toLocaleTimeString()}`}
@@ -305,7 +306,9 @@ function Hero({ data, isFetching }: { data: PlatformData; isFetching: boolean })
             <Activity className="h-4 w-4" /> Real-time tournament feed
           </div>
           <h1 className="mt-6 max-w-4xl text-5xl font-black uppercase leading-[0.95] tracking-normal text-white md:text-7xl xl:text-8xl">
-            Live BGMI esports command center.
+            <span className="glitch-title" data-text="Live BGMI esports command center.">
+              Live BGMI esports command center.
+            </span>
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
             Database-backed tournaments, registrations, rosters, room releases, check-ins, results,
@@ -325,7 +328,7 @@ function Hero({ data, isFetching }: { data: PlatformData; isFetching: boolean })
             <Stat label="Events" value={String(data.tournaments.length)} icon={CalendarDays} />
             <Stat
               label="Live sync"
-              value={data.source === "database" ? "5 sec" : "Waiting"}
+              value={data.source === "database" || data.source === "supabase" ? "5 sec" : "Waiting"}
               icon={Zap}
             />
           </div>
@@ -342,7 +345,11 @@ function Hero({ data, isFetching }: { data: PlatformData; isFetching: boolean })
                     "Awaiting Live Tournament"}
                 </h2>
               </div>
-              <StatusBadge status={data.source === "database" ? "Live" : "DB Pending"} />
+              <StatusBadge
+                status={
+                  data.source === "database" || data.source === "supabase" ? "Live" : "DB Pending"
+                }
+              />
             </div>
             {topTeams.length > 0 ? (
               <div className="mt-5 overflow-hidden rounded-md border border-white/10">

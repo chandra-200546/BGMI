@@ -17,6 +17,7 @@ The current build is a production demonstration surface with complete public, ca
 - Prisma schema covering users, roles, tournaments, teams, players, registrations, payments, matches, rooms, results, leaderboards, drops, announcements, notifications, penalties, appeals, transfers, check-ins, media, hall of fame, sponsors, rules, audit logs, and API keys
 - Live public API endpoint: `GET /api/public/live`
 - React Query polling every five seconds for real-time leaderboard, tournament, schedule, and announcement updates
+- Supabase REST data source support through `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`
 - AI-generated original battle arena hero asset plus CSS gaming animations: scanlines, HUD sweep, reticles, tracers, drop markers, and particle motion
 - Environment example for PostgreSQL, sessions, uploads, payments, email, Discord, and WhatsApp support
 
@@ -46,6 +47,25 @@ npm run db:seed
 ```
 
 The Prisma schema is in `prisma/schema.prisma`. Sensitive room credentials are modeled separately in `MatchRoom` and should only be returned to approved teams after `releaseAt`.
+
+## Supabase Setup
+
+The app prefers Supabase REST when Supabase environment variables are present.
+
+1. Open Supabase SQL Editor.
+2. Run `supabase/schema.sql`.
+3. Seed rows with:
+
+```bash
+SUPABASE_URL="https://your-project.supabase.co" SUPABASE_SERVICE_ROLE_KEY="..." npm run supabase:seed
+```
+
+The deployed app reads these tables:
+
+- `tournaments`
+- `teams`
+- `matches`
+- `announcements`
 
 ## Deployment To Vercel
 

@@ -53,7 +53,7 @@ export type PlatformData = {
   schedules: ScheduleItem[];
   announcements: AnnouncementItem[];
   generatedAt: string;
-  source: "database" | "unconfigured" | "error";
+  source: "database" | "supabase" | "unconfigured" | "error";
   message?: string;
 };
 

@@ -78,6 +78,7 @@
 
 @utility glass-panel {
   position: relative;
+  overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   background:
@@ -87,6 +88,67 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     0 24px 80px -36px rgba(34, 211, 238, 0.38);
   backdrop-filter: blur(18px);
+}
+
+@utility glass-panel {
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background:
+      linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.28), transparent),
+      linear-gradient(
+        180deg,
+        rgba(217, 70, 239, 0.18),
+        transparent 22%,
+        transparent 78%,
+        rgba(248, 113, 113, 0.16)
+      );
+    opacity: 0;
+    transition: opacity 0.22s ease;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    padding: 1px;
+  }
+
+  &:hover::after {
+    opacity: 1;
+  }
+}
+
+.glitch-title {
+  position: relative;
+  display: inline-block;
+  text-shadow:
+    0 0 22px rgba(34, 211, 238, 0.2),
+    0 0 44px rgba(217, 70, 239, 0.14);
+}
+
+.glitch-title::before,
+.glitch-title::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.glitch-title::before {
+  color: #67e8f9;
+  transform: translate(2px, 0);
+  clip-path: polygon(0 0, 100% 0, 100% 33%, 0 33%);
+  animation: glitch-flash 4.2s infinite;
+}
+
+.glitch-title::after {
+  color: #fb7185;
+  transform: translate(-2px, 0);
+  clip-path: polygon(0 66%, 100% 66%, 100% 100%, 0 100%);
+  animation: glitch-flash 4.2s infinite reverse;
 }
 
 @utility hud-card {
@@ -408,5 +470,25 @@
   50% {
     opacity: 1;
     transform: translate3d(12px, -18px, 0);
+  }
+}
+
+@keyframes glitch-flash {
+  0%,
+  88%,
+  100% {
+    opacity: 0;
+  }
+  89% {
+    opacity: 0.85;
+    transform: translate(4px, -2px);
+  }
+  90% {
+    opacity: 0.2;
+    transform: translate(-3px, 1px);
+  }
+  91% {
+    opacity: 0.75;
+    transform: translate(2px, 2px);
   }
 }
