@@ -2,7 +2,7 @@
 
 A premium BGMI esports tournament management web application built with TanStack Start, React, TypeScript, Tailwind CSS, shadcn/ui primitives, Lucide icons, Recharts, React Hook Form, and Zod-ready architecture.
 
-The current build is a production demonstration surface with complete public, captain, and admin workflows represented in the UI, plus a PostgreSQL Prisma schema for the backend domain model.
+The current build is a production demonstration surface with complete public, captain, and admin workflows represented in the UI. Public tournament data is loaded from live API endpoints backed by PostgreSQL through Prisma. If `DATABASE_URL` is not configured, the app intentionally shows a database setup state instead of fake static tournament rows.
 
 ## Included
 
@@ -15,6 +15,9 @@ The current build is a production demonstration surface with complete public, ca
 - Announcements, rules library, gallery, hall-of-fame style media sections, and contact footer
 - Admin console for tournaments, registrations, results, penalties, transfers, seasons, exports, and audit logs
 - Prisma schema covering users, roles, tournaments, teams, players, registrations, payments, matches, rooms, results, leaderboards, drops, announcements, notifications, penalties, appeals, transfers, check-ins, media, hall of fame, sponsors, rules, audit logs, and API keys
+- Live public API endpoint: `GET /api/public/live`
+- React Query polling every five seconds for real-time leaderboard, tournament, schedule, and announcement updates
+- AI-generated original battle arena hero asset plus CSS gaming animations: scanlines, HUD sweep, reticles, tracers, drop markers, and particle motion
 - Environment example for PostgreSQL, sessions, uploads, payments, email, Discord, and WhatsApp support
 
 ## Local Development
@@ -39,6 +42,7 @@ Copy `.env.example` to `.env` and set `DATABASE_URL` to a PostgreSQL connection 
 ```bash
 npx prisma generate
 npx prisma db push
+npm run db:seed
 ```
 
 The Prisma schema is in `prisma/schema.prisma`. Sensitive room credentials are modeled separately in `MatchRoom` and should only be returned to approved teams after `releaseAt`.

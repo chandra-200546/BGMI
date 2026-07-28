@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { getPlatformData } from "./lib/platform-data.server";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -35,6 +36,66 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   });
 }
 
+function jsonResponse(payload: unknown, init?: ResponseInit) {
+  return new Response(JSON.stringify(payload), {
+    ...init,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      ...(init?.headers ?? {}),
+    },
+  });
+}
+
+async function handlePublicApi(request: Request): Promise<Response | undefined> {
+  const url = new URL(request.url);
+  if (!url.pathname.startsWith("/api/public")) return undefined;
+
+  const data = await getPlatformData();
+
+  if (url.pathname === "/api/public/live") {
+    return jsonResponse(data);
+  }
+
+  if (url.pathname === "/api/public/tournaments") {
+    return jsonResponse({
+      data: data.tournaments,
+      generatedAt: data.generatedAt,
+      source: data.source,
+      message: data.message,
+    });
+  }
+
+  if (url.pathname.startsWith("/api/public/leaderboard")) {
+    return jsonResponse({
+      data: data.teams,
+      generatedAt: data.generatedAt,
+      source: data.source,
+      message: data.message,
+    });
+  }
+
+  if (url.pathname.startsWith("/api/public/schedule")) {
+    return jsonResponse({
+      data: data.schedules,
+      generatedAt: data.generatedAt,
+      source: data.source,
+      message: data.message,
+    });
+  }
+
+  if (url.pathname === "/api/public/announcements") {
+    return jsonResponse({
+      data: data.announcements,
+      generatedAt: data.generatedAt,
+      source: data.source,
+      message: data.message,
+    });
+  }
+
+  return jsonResponse({ error: "Public API route not found" }, { status: 404 });
+}
+
 function isH3SwallowedErrorBody(body: string): boolean {
   try {
     const payload = JSON.parse(body) as { unhandled?: unknown; message?: unknown };
@@ -47,6 +108,9 @@ function isH3SwallowedErrorBody(body: string): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const apiResponse = await handlePublicApi(request);
+      if (apiResponse) return apiResponse;
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
