@@ -1,0 +1,441 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PUBLIC
+  CAPTAIN
+  ADMIN
+}
+
+enum TournamentStatus {
+  DRAFT
+  REGISTRATION_OPEN
+  REGISTRATION_CLOSED
+  LIVE
+  COMPLETED
+  CANCELLED
+  ARCHIVED
+}
+
+enum RegistrationStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  PAYMENT_PENDING
+  APPROVED
+  REJECTED
+  WAITLISTED
+  DISQUALIFIED
+}
+
+enum PaymentStatus {
+  NOT_PAID
+  VERIFICATION_PENDING
+  VERIFIED
+  REJECTED
+  REFUNDED
+}
+
+enum MatchStatus {
+  UPCOMING
+  CHECK_IN_OPEN
+  ROOM_RELEASED
+  LIVE
+  COMPLETED
+  DELAYED
+  CANCELLED
+}
+
+model User {
+  id             String         @id @default(cuid())
+  name           String
+  email          String         @unique
+  passwordHash   String?
+  role           Role           @default(PUBLIC)
+  phone          String?
+  discord        String?
+  emailVerified  DateTime?
+  registrations  Registration[]
+  notifications  Notification[]
+  auditLogs       AuditLog[]     @relation("AuditActor")
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  deletedAt      DateTime?
+}
+
+model Season {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  startsAt    DateTime
+  endsAt      DateTime
+  tournaments Tournament[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Tournament {
+  id                   String             @id @default(cuid())
+  seasonId             String?
+  season               Season?            @relation(fields: [seasonId], references: [id])
+  name                 String
+  slug                 String             @unique
+  status               TournamentStatus   @default(DRAFT)
+  bannerUrl            String?
+  mode                 String
+  format               String
+  maps                 String[]
+  prizePool            Int
+  entryFee             Int
+  maxTeams             Int
+  registrationDeadline DateTime
+  rosterLockDeadline   DateTime
+  startsAt             DateTime
+  endsAt               DateTime?
+  scoringRules         Json
+  tieBreakers          String[]
+  registrations        Registration[]
+  teams                Team[]
+  matches              Match[]
+  announcements        Announcement[]
+  media                MediaItem[]
+  sponsors             Sponsor[]
+  rules                Rule[]
+  apiKeys              ApiKey[]
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  deletedAt            DateTime?
+
+  @@index([status, startsAt])
+}
+
+model Team {
+  id              String             @id @default(cuid())
+  tournamentId    String
+  tournament      Tournament         @relation(fields: [tournamentId], references: [id])
+  captainUserId   String?
+  name            String
+  shortName       String
+  logoUrl         String?
+  region          String
+  city            String?
+  description     String?
+  preferredDrop   String?
+  alternateDrop   String?
+  members         TeamMember[]
+  registration    Registration?
+  results         MatchResult[]
+  leaderboard     LeaderboardEntry?
+  dropLocations   DropLocation[]
+  penalties       Penalty[]
+  checkIns        CheckIn[]
+  transfers       TransferRequest[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  deletedAt       DateTime?
+
+  @@unique([tournamentId, name])
+  @@index([tournamentId, shortName])
+}
+
+model Player {
+  id          String       @id @default(cuid())
+  fullName    String
+  ign         String
+  bgmiUid     String
+  email       String?
+  phone       String?
+  state       String?
+  photoUrl    String?
+  teamMembers TeamMember[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([bgmiUid])
+}
+
+model TeamMember {
+  id         String   @id @default(cuid())
+  teamId     String
+  team       Team     @relation(fields: [teamId], references: [id])
+  playerId   String
+  player     Player   @relation(fields: [playerId], references: [id])
+  role       String
+  isStarter  Boolean  @default(false)
+  ageChecked Boolean  @default(false)
+  joinedAt   DateTime @default(now())
+
+  @@unique([teamId, playerId])
+}
+
+model Registration {
+  id                 String             @id @default(cuid())
+  registrationNumber String             @unique
+  teamId             String             @unique
+  team               Team               @relation(fields: [teamId], references: [id])
+  captainId          String
+  captain            User               @relation(fields: [captainId], references: [id])
+  tournamentId        String
+  tournament          Tournament         @relation(fields: [tournamentId], references: [id])
+  status             RegistrationStatus @default(DRAFT)
+  payment            Payment?
+  termsAccepted      Boolean            @default(false)
+  fairPlayAccepted   Boolean            @default(false)
+  submittedAt        DateTime?
+  reviewedAt         DateTime?
+  adminNote          String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([tournamentId, status])
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  registrationId  String        @unique
+  registration    Registration  @relation(fields: [registrationId], references: [id])
+  amount          Int
+  status          PaymentStatus @default(NOT_PAID)
+  transactionId   String?
+  screenshotUrl   String?
+  verifiedAt      DateTime?
+  rejectedReason  String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Match {
+  id          String        @id @default(cuid())
+  tournamentId String
+  tournament  Tournament    @relation(fields: [tournamentId], references: [id])
+  name        String
+  phase       String
+  week        Int
+  matchNumber Int
+  map         String
+  groupName   String
+  startsAt    DateTime
+  status      MatchStatus   @default(UPCOMING)
+  room        MatchRoom?
+  results     MatchResult[]
+  checkIns    CheckIn[]
+
+  @@unique([tournamentId, phase, matchNumber])
+  @@index([tournamentId, startsAt])
+}
+
+model MatchRoom {
+  id             String   @id @default(cuid())
+  matchId        String   @unique
+  match          Match    @relation(fields: [matchId], references: [id])
+  roomId         String
+  password       String
+  releaseAt      DateTime
+  lobbyOpensAt   DateTime
+  checkInEndsAt  DateTime
+  released       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model MatchResult {
+  id              String   @id @default(cuid())
+  matchId         String
+  match           Match    @relation(fields: [matchId], references: [id])
+  teamId          String
+  team            Team     @relation(fields: [teamId], references: [id])
+  placement       Int
+  finishes        Int
+  placementPoints Int
+  finishPoints    Int
+  penaltyPoints   Int      @default(0)
+  totalPoints     Int
+  published       Boolean  @default(false)
+  revision        Int      @default(1)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([matchId, teamId])
+}
+
+model LeaderboardEntry {
+  id              String   @id @default(cuid())
+  teamId          String   @unique
+  team            Team     @relation(fields: [teamId], references: [id])
+  matchesPlayed   Int      @default(0)
+  wwcd            Int      @default(0)
+  placementPoints Int      @default(0)
+  finishes        Int      @default(0)
+  finishPoints    Int      @default(0)
+  penaltyPoints   Int      @default(0)
+  totalPoints     Int      @default(0)
+  rank            Int?
+  recentForm      String[]
+  updatedAt       DateTime @updatedAt
+}
+
+model DropLocation {
+  id        String   @id @default(cuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id])
+  map       String
+  label     String
+  x         Float
+  y         Float
+  isSplit   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([map, label])
+}
+
+model Announcement {
+  id           String     @id @default(cuid())
+  tournamentId String?
+  tournament  Tournament? @relation(fields: [tournamentId], references: [id])
+  title        String
+  category     String
+  body         String
+  pinned       Boolean    @default(false)
+  targetTeamId String?
+  publishAt    DateTime   @default(now())
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  title     String
+  body      String
+  deepLink  String?
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+}
+
+model Penalty {
+  id             String   @id @default(cuid())
+  teamId          String
+  team            Team     @relation(fields: [teamId], references: [id])
+  type            String
+  reason          String
+  pointsDeducted  Int      @default(0)
+  evidenceUrl     String?
+  adminNote       String?
+  appealDeadline  DateTime?
+  appeals         Appeal[]
+  createdAt       DateTime @default(now())
+}
+
+model Appeal {
+  id         String   @id @default(cuid())
+  penaltyId  String
+  penalty    Penalty  @relation(fields: [penaltyId], references: [id])
+  message    String
+  status     String   @default("PENDING")
+  adminReply String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model TransferRequest {
+  id                String   @id @default(cuid())
+  teamId             String
+  team               Team     @relation(fields: [teamId], references: [id])
+  currentPlayerName  String
+  replacementName    String
+  replacementBgmiUid String
+  reason             String
+  documentUrl        String?
+  status             String   @default("PENDING")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model CheckIn {
+  id        String   @id @default(cuid())
+  matchId   String
+  match     Match    @relation(fields: [matchId], references: [id])
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id])
+  qrToken   String   @unique
+  status    String   @default("NOT_OPEN")
+  checkedAt DateTime?
+
+  @@unique([matchId, teamId])
+}
+
+model MediaItem {
+  id           String     @id @default(cuid())
+  tournamentId String?
+  tournament  Tournament? @relation(fields: [tournamentId], references: [id])
+  category     String
+  title        String
+  url          String
+  caption      String?
+  tags         String[]
+  createdAt    DateTime   @default(now())
+}
+
+model HallOfFameEntry {
+  id          String   @id @default(cuid())
+  category    String
+  name        String
+  teamName    String?
+  tournament  String
+  season      String?
+  achievement String
+  stats       Json
+  imageUrl    String?
+  awardedAt   DateTime
+  createdAt   DateTime @default(now())
+}
+
+model Sponsor {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament  Tournament @relation(fields: [tournamentId], references: [id])
+  name         String
+  logoUrl      String?
+  website      String?
+}
+
+model Rule {
+  id           String     @id @default(cuid())
+  tournamentId String?
+  tournament  Tournament? @relation(fields: [tournamentId], references: [id])
+  section      String
+  body         String
+  order        Int
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation("AuditActor", fields: [actorId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
+
+model ApiKey {
+  id           String     @id @default(cuid())
+  tournamentId String?
+  tournament  Tournament? @relation(fields: [tournamentId], references: [id])
+  name         String
+  keyHash      String     @unique
+  rateLimit    Int        @default(120)
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  revokedAt    DateTime?
+}

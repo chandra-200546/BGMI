@@ -1,744 +1,1393 @@
 import { createFileRoute } from "@tanstack/react-router";
-import type { FormEvent } from "react";
-import { useState } from "react";
+import {
+  Activity,
+  Bell,
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  ClipboardCheck,
+  Crown,
+  Database,
+  Download,
+  FileText,
+  Filter,
+  Gamepad2,
+  Gauge,
+  Image,
+  Lock,
+  MapPinned,
+  Menu,
+  MessageCircle,
+  QrCode,
+  Search,
+  Shield,
+  Swords,
+  Trophy,
+  Upload,
+  Users,
+  Video,
+  X,
+  Zap,
+} from "lucide-react";
+import { useState, type ComponentType, type ReactNode, type SVGProps } from "react";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Kos — Find what's past the milestone" },
+      { title: "NexBattles BGMI - Esports Tournament Platform" },
       {
         name: "description",
         content:
-          "Discover India's hidden villages, valleys and heritage sites — sorted by how far they are from wherever you're standing. In English, हिन्दी and ಕನ್ನಡ.",
+          "A premium BGMI esports tournament management platform for discovery, team registration, live standings, schedules, dashboards, and admin operations.",
       },
-      { property: "og:title", content: "Kos — Find what's past the milestone" },
+      { property: "og:title", content: "NexBattles BGMI - Tournament Command Center" },
       {
         property: "og:description",
         content:
-          "A travel app that starts with where you're standing and shows you the India that doesn't trend.",
+          "Manage BGMI tournaments, registrations, rosters, leaderboards, rooms, notifications, and admin workflows from one futuristic esports platform.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: KosLanding,
+  component: BgmiTournamentApp,
 });
 
-type LanguageCode = "en" | "hi" | "kn";
+type Icon = ComponentType<SVGProps<SVGSVGElement>>;
+type Status = "Registration Open" | "Closing Soon" | "Live" | "Completed" | "Full";
 
-const languageOptions: Array<{ code: LanguageCode; label: string; short: string }> = [
-  { code: "en", label: "English", short: "EN" },
-  { code: "hi", label: "हिन्दी", short: "हि" },
-  { code: "kn", label: "ಕನ್ನಡ", short: "ಕ" },
-];
-
-const heroCopy: Record<
-  LanguageCode,
-  {
-    kicker: string;
-    titleStart: string;
-    titleHighlight: string;
-    body: string;
-    note: string;
-    primaryCta: string;
-    secondaryCta: string;
-    meta: string;
-  }
-> = {
-  en: {
-    kicker: "A travel app for the India you haven't seen",
-    titleStart: "Find what's",
-    titleHighlight: "past the milestone.",
-    body:
-      "The same 50 places keep showing up on every travel app. Kos maps the rest — villages, valleys, forts, waterfalls, heritage towns — and sorts them by how far they are from wherever you're standing right now.",
-    note: "कोस · the old Indian unit of distance. The kos minar marked the road. We're marking what's beyond it.",
-    primaryCta: "Explore near me →",
-    secondaryCta: "How it works",
-    meta: "Free · Works offline soon · English · हिन्दी · ಕನ್ನಡ",
-  },
-  hi: {
-    kicker: "उस भारत के लिए यात्रा ऐप जिसे आपने अभी तक नहीं देखा",
-    titleStart: "मील के पत्थर के",
-    titleHighlight: "आगे क्या है खोजें.",
-    body:
-      "हर ट्रैवल ऐप पर वही 50 जगहें दिखती हैं। Kos बाकी जगहें दिखाता है — गांव, घाटियां, किले, झरने और विरासत शहर — और उन्हें आपकी मौजूदा जगह से दूरी के हिसाब से सजाता है।",
-    note: "कोस · दूरी की पुरानी भारतीय इकाई। कोस मीनार रास्ता बताती थी। हम उसके आगे की जगहें दिखा रहे हैं।",
-    primaryCta: "मेरे पास खोजें →",
-    secondaryCta: "यह कैसे काम करता है",
-    meta: "मुफ्त · ऑफलाइन जल्द · English · हिन्दी · ಕನ್ನಡ",
-  },
-  kn: {
-    kicker: "ನೀವು ಇನ್ನೂ ನೋಡದ ಭಾರತದಿಗಾಗಿ ಪ್ರಯಾಣ ಆಪ್",
-    titleStart: "ಮೈಲಿಗಲ್ಲಿನ",
-    titleHighlight: "ಆಚೆಗೆ ಇರುವುದನ್ನು ಹುಡುಕಿ.",
-    body:
-      "ಪ್ರತಿ ಪ್ರಯಾಣ ಆಪ್‌ನಲ್ಲೂ ಅದೇ 50 ಸ್ಥಳಗಳು ಕಾಣಿಸುತ್ತವೆ. Kos ಉಳಿದ ಸ್ಥಳಗಳನ್ನು ತೋರಿಸುತ್ತದೆ — ಹಳ್ಳಿಗಳು, ಕಣಿವೆಗಳು, ಕೋಟೆಗಳು, ಜಲಪಾತಗಳು, ಪಾರಂಪರಿಕ ಪಟ್ಟಣಗಳು — ಮತ್ತು ನೀವು ಇರುವ ಸ್ಥಳದಿಂದ ದೂರದ ಪ್ರಕಾರ ಅವುಗಳನ್ನು ಸರಿಸುತ್ತದೆ.",
-    note: "ಕೋಸ · ದೂರದ ಹಳೆಯ ಭಾರತೀಯ ಅಳತೆ. ಕೋಸ ಮಿನಾರ್ ದಾರಿಗೆ ಗುರುತು. ನಾವು ಅದರಾಚೆಯ ಸ್ಥಳಗಳನ್ನು ಗುರುತಿಸುತ್ತಿದ್ದೇವೆ.",
-    primaryCta: "ನನ್ನ ಹತ್ತಿರ ಅನ್ವೇಷಿಸಿ →",
-    secondaryCta: "ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ",
-    meta: "ಉಚಿತ · ಆಫ್‌ಲೈನ್ ಶೀಘ್ರದಲ್ಲೇ · English · हिन्दी · ಕನ್ನಡ",
-  },
+type Tournament = {
+  id: string;
+  name: string;
+  mode: string;
+  status: Status;
+  prize: string;
+  fee: string;
+  slots: number;
+  registered: number;
+  starts: string;
+  deadline: string;
+  map: string;
+  phase: string;
+  accent: string;
 };
 
-/* --- Building blocks --- */
+type Team = {
+  rank: number;
+  name: string;
+  short: string;
+  region: string;
+  captain: string;
+  matches: number;
+  wwcd: number;
+  placement: number;
+  finishes: number;
+  penalty: number;
+  form: string[];
+  drop: string;
+};
 
-function Milestone({
-  number,
-  label,
-  variant = "indigo",
-}: {
-  number: string;
-  label: string;
-  variant?: "indigo" | "cream";
-}) {
+const tournaments: Tournament[] = [
+  {
+    id: "nebula",
+    name: "Nebula Masters Invitational",
+    mode: "Squad TPP",
+    status: "Registration Open",
+    prize: "₹5,00,000",
+    fee: "₹799",
+    slots: 64,
+    registered: 48,
+    starts: "15 Aug 2026",
+    deadline: "10 Aug 2026",
+    map: "Erangel, Miramar, Sanhok",
+    phase: "Qualifiers",
+    accent: "from-cyan-400 to-fuchsia-500",
+  },
+  {
+    id: "rift",
+    name: "Crimson Rift Pro League",
+    mode: "Squad FPP",
+    status: "Closing Soon",
+    prize: "₹2,50,000",
+    fee: "₹499",
+    slots: 32,
+    registered: 29,
+    starts: "02 Sep 2026",
+    deadline: "31 Jul 2026",
+    map: "Erangel, Livik",
+    phase: "League",
+    accent: "from-red-500 to-orange-400",
+  },
+  {
+    id: "aurora",
+    name: "Aurora Campus Cup",
+    mode: "Squad TPP",
+    status: "Live",
+    prize: "₹1,20,000",
+    fee: "Free",
+    slots: 24,
+    registered: 24,
+    starts: "24 Jul 2026",
+    deadline: "20 Jul 2026",
+    map: "Miramar, Vikendi",
+    phase: "Grand Finals",
+    accent: "from-violet-400 to-blue-500",
+  },
+];
+
+const teams: Team[] = [
+  {
+    rank: 1,
+    name: "Velocity Reign",
+    short: "VRN",
+    region: "Delhi",
+    captain: "Aarav Blaze",
+    matches: 16,
+    wwcd: 4,
+    placement: 72,
+    finishes: 98,
+    penalty: 0,
+    form: ["W", "3", "2", "W", "5"],
+    drop: "School",
+  },
+  {
+    rank: 2,
+    name: "Neon Vipers",
+    short: "NVX",
+    region: "Mumbai",
+    captain: "Rehan Volt",
+    matches: 16,
+    wwcd: 3,
+    placement: 68,
+    finishes: 91,
+    penalty: 2,
+    form: ["2", "W", "4", "7", "W"],
+    drop: "Pochinki",
+  },
+  {
+    rank: 3,
+    name: "Iron Phantoms",
+    short: "IPH",
+    region: "Bengaluru",
+    captain: "Kabir Hex",
+    matches: 16,
+    wwcd: 2,
+    placement: 61,
+    finishes: 86,
+    penalty: 0,
+    form: ["4", "2", "W", "6", "3"],
+    drop: "Rozhok",
+  },
+  {
+    rank: 4,
+    name: "Storm Syntax",
+    short: "SSX",
+    region: "Hyderabad",
+    captain: "Ishan Node",
+    matches: 16,
+    wwcd: 2,
+    placement: 58,
+    finishes: 81,
+    penalty: 4,
+    form: ["7", "3", "5", "2", "W"],
+    drop: "Mylta",
+  },
+  {
+    rank: 5,
+    name: "Quantum Rush",
+    short: "QRX",
+    region: "Pune",
+    captain: "Dev Cipher",
+    matches: 16,
+    wwcd: 1,
+    placement: 55,
+    finishes: 78,
+    penalty: 0,
+    form: ["5", "8", "2", "W", "4"],
+    drop: "Yasnaya",
+  },
+  {
+    rank: 6,
+    name: "Solar Dominion",
+    short: "SDM",
+    region: "Kolkata",
+    captain: "Rudra Nova",
+    matches: 16,
+    wwcd: 1,
+    placement: 49,
+    finishes: 72,
+    penalty: 1,
+    form: ["6", "4", "8", "3", "2"],
+    drop: "Georgopol",
+  },
+  {
+    rank: 7,
+    name: "Rogue Circuit",
+    short: "RGC",
+    region: "Chennai",
+    captain: "Nikhil Flux",
+    matches: 16,
+    wwcd: 1,
+    placement: 46,
+    finishes: 66,
+    penalty: 0,
+    form: ["8", "5", "6", "4", "3"],
+    drop: "Military Base",
+  },
+  {
+    rank: 8,
+    name: "Apex Mirage",
+    short: "AMG",
+    region: "Jaipur",
+    captain: "Vihaan Frost",
+    matches: 16,
+    wwcd: 0,
+    placement: 41,
+    finishes: 61,
+    penalty: 0,
+    form: ["9", "6", "7", "5", "6"],
+    drop: "Severny",
+  },
+];
+
+const schedules = [
+  ["Grand Final M1", "28 Jul 2026", "7:00 PM", "Erangel", "Room Released", "Group A+B"],
+  ["Grand Final M2", "28 Jul 2026", "7:50 PM", "Miramar", "Check-in Open", "Group A+B"],
+  ["Grand Final M3", "29 Jul 2026", "7:00 PM", "Sanhok", "Upcoming", "Group A+B"],
+  ["Grand Final M4", "29 Jul 2026", "7:50 PM", "Vikendi", "Upcoming", "Group A+B"],
+];
+
+const announcements = [
+  ["Important", "Grand finals lobby opens 20 minutes earlier tonight.", "Pinned", "28 Jul 2026"],
+  ["Rules", "Zone heal camping penalty updated for finals matches.", "Published", "27 Jul 2026"],
+  [
+    "Result",
+    "Semi-final leaderboard verified after payment and roster audit.",
+    "Published",
+    "26 Jul 2026",
+  ],
+  ["Schedule", "Miramar slot moved to 7:50 PM after broadcaster sync.", "Published", "25 Jul 2026"],
+];
+
+const placementPoints: Record<number, number> = { 1: 10, 2: 6, 3: 5, 4: 4, 5: 3, 6: 2, 7: 1, 8: 1 };
+
+function totalPoints(team: Team) {
+  return team.placement + team.finishes - team.penalty;
+}
+
+function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <div className={`glass-panel ${className}`}>{children}</div>;
+}
+
+function Stat({ label, value, icon: IconComponent }: { label: string; value: string; icon: Icon }) {
   return (
-    <div className={variant === "cream" ? "milestone milestone-cream" : "milestone"}>
-      <span className="font-mono text-3xl font-semibold leading-none">{number}</span>
-      <span className="mt-2 max-w-[8rem] text-center font-mono text-[0.62rem] uppercase tracking-[0.18em] opacity-85">
-        {label}
-      </span>
-    </div>
+    <Card className="p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">{label}</p>
+          <p className="mt-2 text-2xl font-black text-white">{value}</p>
+        </div>
+        <span className="grid h-11 w-11 place-items-center rounded-md border border-cyan-300/30 bg-cyan-300/10 text-cyan-200">
+          <IconComponent className="h-5 w-5" />
+        </span>
+      </div>
+    </Card>
   );
 }
 
-function KosMark({ className = "" }: { className?: string }) {
+function StatusBadge({ status }: { status: string }) {
+  const color =
+    status === "Live"
+      ? "border-red-400/50 bg-red-500/15 text-red-200"
+      : status === "Registration Open"
+        ? "border-emerald-400/50 bg-emerald-400/15 text-emerald-200"
+        : status === "Closing Soon"
+          ? "border-amber-300/50 bg-amber-300/15 text-amber-100"
+          : "border-slate-400/40 bg-slate-400/10 text-slate-200";
   return (
-    <svg viewBox="0 0 40 48" className={className} fill="none" aria-hidden="true">
-      <path
-        d="M20 2c-5 0-8 3-8 7v4h-3v3h3v3l-4 2v3h-3v22h30V24h-3v-3l-4-2v-3h3v-3h-3V9c0-4-3-7-8-7Z"
-        fill="currentColor"
-      />
-      <circle cx="20" cy="10" r="1.8" fill="var(--color-marigold)" />
-    </svg>
+    <span
+      className={`rounded-sm border px-2 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] ${color}`}
+    >
+      {status}
+    </span>
   );
 }
 
-/* --- Sections --- */
-
-function Nav({
-  activeLanguage,
-  onLanguageChange,
-}: {
-  activeLanguage: LanguageCode;
-  onLanguageChange: (language: LanguageCode) => void;
-}) {
+function AppNav() {
+  const [open, setOpen] = useState(false);
+  const links = [
+    "Tournaments",
+    "Register",
+    "Leaderboard",
+    "Schedule",
+    "Teams",
+    "Rules",
+    "Gallery",
+    "Admin",
+  ];
   return (
-    <header className="sticky top-0 z-40 border-b border-[color:var(--color-indigo)]/15 bg-[color:var(--color-cream)]/85 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center gap-6 px-5 py-3">
-        <a href="#top" className="flex items-center gap-2">
-          <KosMark className="h-7 w-6 text-[color:var(--color-indigo)]" />
-          <div className="flex flex-col leading-none">
-            <span className="font-display text-xl text-[color:var(--color-indigo)]">Kos</span>
-            <span className="font-mono text-[0.55rem] uppercase tracking-[0.24em] text-[color:var(--color-vermillion)]">
-              कोस · ಕೋಸ
-            </span>
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#070912]/85 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 lg:px-6">
+        <a href="#home" className="flex items-center gap-3">
+          <span className="relative grid h-11 w-11 place-items-center overflow-hidden rounded-md border border-cyan-300/40 bg-cyan-300/10 text-cyan-100 shadow-[0_0_28px_rgba(34,211,238,0.22)]">
+            <Swords className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-lg font-black uppercase leading-none tracking-[0.12em] text-white">
+              NexBattles
+            </p>
+            <p className="text-[0.62rem] font-bold uppercase tracking-[0.25em] text-cyan-300">
+              BGMI Command
+            </p>
           </div>
         </a>
-        <nav className="ml-auto hidden items-center gap-7 md:flex">
-          {[
-            ["How it works", "#how"],
-            ["Discover", "#discover"],
-            ["Languages", "#languages"],
-            ["Coverage", "#coverage"],
-          ].map(([label, href]) => (
+        <nav className="ml-auto hidden items-center gap-5 lg:flex">
+          {links.map((link) => (
             <a
-              key={href}
-              href={href}
-              className="font-mono text-xs uppercase tracking-[0.2em] text-[color:var(--color-indigo)]/80 hover:text-[color:var(--color-vermillion)]"
+              key={link}
+              href={`#${link.toLowerCase()}`}
+              className="text-xs font-bold uppercase tracking-[0.16em] text-slate-300 hover:text-cyan-200"
             >
-              {label}
+              {link}
             </a>
           ))}
-          <div className="flex gap-1 font-mono text-[0.65rem] font-medium" aria-label="Choose language">
-            {languageOptions.map((language) => {
-              const isActive = language.code === activeLanguage;
-              return (
-                <button
-                  key={language.code}
-                  type="button"
-                  onClick={() => onLanguageChange(language.code)}
-                  aria-pressed={isActive}
-                  className={
-                    isActive
-                      ? "rounded-sm bg-[color:var(--color-indigo)] px-1.5 py-0.5 text-[color:var(--color-cream)]"
-                      : "rounded-sm px-1.5 py-0.5 text-[color:var(--color-indigo)]/60 hover:bg-[color:var(--color-indigo)]/10 hover:text-[color:var(--color-indigo)]"
-                  }
-                >
-                  <span className="sr-only">{language.label}</span>
-                  {language.short}
-                </button>
-              );
-            })}
-          </div>
         </nav>
-        <a href="#get" className="btn-vermillion text-sm">
-          Explore near me →
+        <button className="hidden rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold uppercase tracking-[0.14em] text-white lg:inline-flex">
+          Season 06
+        </button>
+        <button
+          className="relative grid h-10 w-10 place-items-center rounded-md border border-white/10 bg-white/5 text-slate-100"
+          aria-label="Notifications"
+        >
+          <Bell className="h-4 w-4" />
+          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-400" />
+        </button>
+        <a
+          href="#register"
+          className="hidden rounded-md bg-cyan-300 px-4 py-2 text-sm font-black uppercase tracking-[0.12em] text-[#061019] shadow-[0_0_28px_rgba(34,211,238,0.28)] sm:inline-flex"
+        >
+          Register
         </a>
+        <button
+          onClick={() => setOpen((value) => !value)}
+          className="grid h-10 w-10 place-items-center rounded-md border border-white/10 bg-white/5 text-white lg:hidden"
+          aria-label="Toggle menu"
+        >
+          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
       </div>
+      {open ? (
+        <div className="border-t border-white/10 bg-[#070912] px-4 py-4 lg:hidden">
+          <div className="grid gap-2">
+            {links.map((link) => (
+              <a
+                key={link}
+                href={`#${link.toLowerCase()}`}
+                onClick={() => setOpen(false)}
+                className="rounded-md border border-white/10 bg-white/5 px-3 py-3 text-sm font-bold uppercase tracking-[0.14em] text-slate-200"
+              >
+                {link}
+              </a>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </header>
   );
 }
 
-function Hero({ activeLanguage }: { activeLanguage: LanguageCode }) {
-  const copy = heroCopy[activeLanguage];
-
+function Hero() {
   return (
-    <section id="top" className="paper-grain relative overflow-hidden">
-      <div className="mx-auto max-w-6xl px-5 pt-16 pb-24 md:pt-24 md:pb-32">
-        <div className="max-w-3xl">
-          <div className="flex items-center gap-3">
-            <span className="section-label">{copy.kicker}</span>
+    <section id="home" className="relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_10%,rgba(217,70,239,0.28),transparent_34%),radial-gradient(circle_at_20%_20%,rgba(34,211,238,0.24),transparent_30%),linear-gradient(135deg,#070912_0%,#101329_52%,#05060c_100%)]" />
+      <div className="grid-overlay absolute inset-0 opacity-50" />
+      <div className="mx-auto grid min-h-[calc(100vh-72px)] max-w-7xl items-center gap-10 px-4 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:px-6">
+        <div className="relative z-10">
+          <div className="inline-flex items-center gap-2 rounded-md border border-cyan-300/30 bg-cyan-300/10 px-3 py-2 text-xs font-bold uppercase tracking-[0.18em] text-cyan-200">
+            <Activity className="h-4 w-4" /> Registration live
           </div>
-
-          <h1 className="mt-6 font-display text-5xl leading-[1.05] text-[color:var(--color-indigo)] md:text-7xl">
-            {copy.titleStart}{" "}
-            <span className="relative inline-block">
-              <span className="relative z-10">{copy.titleHighlight}</span>
-              <span
-                aria-hidden
-                className="absolute inset-x-0 bottom-1 -z-0 h-3 bg-[color:var(--color-marigold)]/70 md:h-4"
-              />
-            </span>
+          <h1 className="mt-6 max-w-4xl text-5xl font-black uppercase leading-[0.95] tracking-normal text-white md:text-7xl xl:text-8xl">
+            Run BGMI tournaments like a broadcast command center.
           </h1>
-
-          <p className="mt-8 max-w-2xl text-lg leading-relaxed text-[color:var(--color-indigo)]/85">
-            {copy.body}
+          <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
+            Discover tournaments, register squads, manage rosters, release rooms, publish results,
+            calculate points, notify players, and operate a complete admin panel from one premium
+            esports cockpit.
           </p>
-
-          <p className="mt-4 max-w-2xl font-mono text-sm text-[color:var(--color-indigo)]/70">
-            {copy.note}
-          </p>
-
-          <div className="mt-10 flex flex-wrap items-center gap-4">
-            <a href="#get" className="btn-vermillion">
-              {copy.primaryCta}
+          <div className="mt-8 flex flex-wrap gap-3">
+            <a href="#register" className="neon-button">
+              Register Your Team <ChevronRight className="h-4 w-4" />
             </a>
-            <a href="#how" className="btn-outline-indigo">
-              {copy.secondaryCta}
+            <a href="#tournaments" className="ghost-button">
+              View Tournament
             </a>
           </div>
-
-          <div className="mt-6 font-mono text-xs text-[color:var(--color-indigo)]/60">
-            {copy.meta}
+          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Stat label="Prize pool" value="₹8.7L" icon={Trophy} />
+            <Stat label="Teams" value="101/120" icon={Users} />
+            <Stat label="Starts in" value="18D 04H" icon={CalendarDays} />
+            <Stat label="Live rooms" value="06" icon={Lock} />
           </div>
         </div>
-
-        <div className="mt-16 grid grid-cols-3 gap-4 sm:gap-8 md:mt-20">
-          <Milestone number="51" label="Places · Karnataka" />
-          <Milestone number="28" label="States seeded" />
-          <Milestone number="3" label="Languages · EN · हि · ಕ" />
-        </div>
-      </div>
-
-      <div className="absolute -right-24 top-16 hidden text-[color:var(--color-indigo)]/25 md:block">
-        <svg width="380" height="380" viewBox="0 0 380 380" fill="none">
-          <path
-            d="M20 340 C 120 300, 80 200, 200 180 S 340 80, 360 20"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeDasharray="2 8"
-            fill="none"
-          />
-          <circle cx="200" cy="180" r="4" fill="var(--color-vermillion)" />
-          <circle cx="360" cy="20" r="4" fill="var(--color-vermillion)" />
-          <circle cx="20" cy="340" r="4" fill="var(--color-vermillion)" />
-        </svg>
-      </div>
-    </section>
-  );
-}
-
-function HowItWorks() {
-  const steps = [
-    {
-      n: "01",
-      t: "Share your location",
-      d: "Tap once. Kos reads your live GPS — nothing stored, nothing sold.",
-    },
-    {
-      n: "02",
-      t: "See what's actually near you",
-      d: "Real places, real distances. Sorted from closest outward, not by paid listings.",
-    },
-    {
-      n: "03",
-      t: "Get there",
-      d: "How to reach, permits, best season, and turn-by-turn directions from the exact spot you tapped from.",
-    },
-  ];
-  return (
-    <section id="how" className="paper-grain-deep border-y border-[color:var(--color-indigo)]/15">
-      <div className="mx-auto max-w-6xl px-5 py-24">
-        <span className="section-label">How Kos works</span>
-        <h2 className="mt-3 max-w-3xl font-display text-4xl leading-tight text-[color:var(--color-indigo)] md:text-5xl">
-          Three taps between you and somewhere you've never heard of.
-        </h2>
-
-        <div className="mt-14 grid gap-8 md:grid-cols-3">
-          {steps.map((s) => (
-            <div key={s.n} className="border-l-2 border-[color:var(--color-vermillion)] pl-5">
-              <div className="font-mono text-xs tracking-widest text-[color:var(--color-vermillion)]">
-                Step {s.n}
+        <div className="relative z-10">
+          <Card className="hud-card p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] text-cyan-300">
+                  Live Finals Feed
+                </p>
+                <h2 className="mt-2 text-2xl font-black uppercase text-white">Aurora Campus Cup</h2>
               </div>
-              <h3 className="mt-2 font-display text-2xl text-[color:var(--color-indigo)]">
-                {s.t}
-              </h3>
-              <p className="mt-3 text-[color:var(--color-indigo)]/80">{s.d}</p>
+              <StatusBadge status="Live" />
             </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Discover() {
-  const places = [
-    { name: "Avani Kshetra", area: "Kolar", km: "68", type: "Heritage · Ramayana-linked hill temple", season: "Oct–Feb" },
-    { name: "Muthyala Maduvu", area: "Anekal", km: "42", type: "Nature · Pearl-drop waterfall", season: "Jul–Nov" },
-    { name: "Devarayanadurga", area: "Tumakuru", km: "74", type: "Heritage · Granite hill forts", season: "Oct–Mar" },
-    { name: "Bilikal Rangaswamy Betta", area: "Kanakapura", km: "89", type: "Nature · Sholapith forest", season: "Sep–Feb" },
-    { name: "Anthargange", area: "Kolar", km: "72", type: "Adventure · Cave-strewn hill", season: "Oct–Mar" },
-    { name: "Hampi Byways", area: "Vijayanagara", km: "352", type: "Heritage · Off-circuit ruins", season: "Nov–Feb" },
-  ];
-
-  return (
-    <section id="discover" className="paper-grain">
-      <div className="mx-auto max-w-6xl px-5 py-24">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <span className="section-label">A day in the app</span>
-            <h2 className="mt-3 font-display text-4xl text-[color:var(--color-indigo)] md:text-5xl">
-              What Kos looks like when you open it near Bengaluru.
-            </h2>
-          </div>
-          <p className="max-w-md text-[color:var(--color-indigo)]/75">
-            No feed. No influencers. Just places, and how far each one is from
-            where your phone is right now.
-          </p>
-        </div>
-
-        {/* Browser mockup */}
-        <div className="mt-12 overflow-hidden rounded-md border border-[color:var(--color-indigo)]/20 bg-[color:var(--color-indigo)] shadow-[0_20px_60px_-20px_rgba(27,42,74,0.35)]">
-          <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
-            <span className="h-2.5 w-2.5 rounded-full bg-[color:var(--color-vermillion)]" />
-            <span className="h-2.5 w-2.5 rounded-full bg-[color:var(--color-marigold)]" />
-            <span className="h-2.5 w-2.5 rounded-full bg-[color:var(--color-pine)]" />
-            <div className="ml-4 flex-1 rounded-sm bg-white/10 px-3 py-1 font-mono text-[0.7rem] text-[color:var(--color-cream)]/80">
-              kos.travel / near-me · 📍 12.9716° N, 77.5946° E · Bengaluru
-            </div>
-            <div className="hidden gap-1 font-mono text-[0.65rem] text-[color:var(--color-cream)]/70 md:flex">
-              <span className="rounded bg-[color:var(--color-marigold)] px-1.5 py-0.5 text-[color:var(--color-indigo)]">
-                EN
-              </span>
-              <span className="px-1.5 py-0.5">हि</span>
-              <span className="px-1.5 py-0.5">ಕ</span>
-            </div>
-          </div>
-
-          <div className="grid gap-0 bg-[color:var(--color-cream)] md:grid-cols-[260px_1fr]">
-            <aside className="hidden border-r border-[color:var(--color-indigo)]/15 p-5 md:block">
-              <div className="section-label !text-[0.62rem]">Filter by</div>
-              <ul className="mt-4 space-y-2 text-sm text-[color:var(--color-indigo)]/85">
-                {[
-                  ["Distance", "< 200 km"],
-                  ["Type", "Heritage · Nature"],
-                  ["Effort", "Weekend"],
-                  ["Permits", "None required"],
-                  ["Season", "Oct–Feb"],
-                ].map(([k, v]) => (
-                  <li
-                    key={k}
-                    className="flex items-center justify-between border-b border-dashed border-[color:var(--color-indigo)]/20 pb-2"
+            <div className="mt-5 overflow-hidden rounded-md border border-white/10">
+              {teams.slice(0, 5).map((team) => (
+                <div
+                  key={team.name}
+                  className="grid grid-cols-[40px_1fr_auto] items-center gap-3 border-b border-white/10 bg-white/[0.03] px-3 py-3 last:border-b-0"
+                >
+                  <span
+                    className={`grid h-9 w-9 place-items-center rounded-md font-black ${team.rank === 1 ? "bg-amber-300 text-black" : team.rank === 2 ? "bg-slate-300 text-black" : team.rank === 3 ? "bg-orange-400 text-black" : "bg-white/10 text-white"}`}
                   >
-                    <span className="font-mono text-[0.7rem] uppercase tracking-widest text-[color:var(--color-indigo)]/60">
-                      {k}
-                    </span>
-                    <span>{v}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="stamp-border mt-6 bg-[color:var(--color-marigold)]/25 p-3 text-xs text-[color:var(--color-indigo)]">
-                <div className="font-mono text-[0.62rem] uppercase tracking-widest">
-                  Coverage near you
-                </div>
-                <div className="mt-1">Karnataka · deep</div>
-                <div>Rest of India · seeded</div>
-              </div>
-            </aside>
-
-            <div className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-display text-2xl text-[color:var(--color-indigo)]">
-                    Near you, right now
+                    {team.rank}
+                  </span>
+                  <div>
+                    <p className="font-bold text-white">{team.name}</p>
+                    <p className="text-xs text-slate-400">
+                      {team.region} - {team.form.join(" / ")}
+                    </p>
                   </div>
-                  <div className="mt-1 font-mono text-[0.7rem] uppercase tracking-widest text-[color:var(--color-indigo)]/60">
-                    Sorted by live distance · 6 of 51
-                  </div>
+                  <p className="text-xl font-black text-cyan-200">{totalPoints(team)}</p>
                 </div>
-                <div className="font-mono text-xs text-[color:var(--color-vermillion)]">
-                  ● live GPS
-                </div>
-              </div>
-
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                {places.map((p) => (
-                  <div
-                    key={p.name}
-                    className="group border border-[color:var(--color-indigo)]/15 bg-[color:var(--color-cream)] p-4 transition-colors hover:border-[color:var(--color-vermillion)]"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="font-display text-lg text-[color:var(--color-indigo)]">
-                          {p.name}
-                        </div>
-                        <div className="font-mono text-[0.65rem] uppercase tracking-widest text-[color:var(--color-indigo)]/60">
-                          {p.area}
-                        </div>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <div className="font-mono text-2xl font-semibold text-[color:var(--color-vermillion)]">
-                          {p.km}
-                        </div>
-                        <div className="font-mono text-[0.6rem] uppercase tracking-widest text-[color:var(--color-indigo)]/60">
-                          km away
-                        </div>
-                      </div>
-                    </div>
-                    <p className="mt-3 text-sm text-[color:var(--color-indigo)]/80">{p.type}</p>
-                    <div className="mt-3 flex items-center justify-between font-mono text-[0.65rem] uppercase tracking-widest text-[color:var(--color-indigo)]/60">
-                      <span>Best: {p.season}</span>
-                      <span className="text-[color:var(--color-vermillion)]">Directions →</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
-          </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <MiniMetric label="Room release" value="19:00" />
+              <MiniMetric label="Map" value="Erangel" />
+              <MiniMetric label="Checked in" value="23/24" />
+            </div>
+          </Card>
         </div>
       </div>
     </section>
   );
 }
 
-function Languages({
-  activeLanguage,
-  onLanguageChange,
-}: {
-  activeLanguage: LanguageCode;
-  onLanguageChange: (language: LanguageCode) => void;
-}) {
-  const samples = [
-    { lang: "en" as const, code: "EN", title: "English", head: "Places near you", body: "51 hand-picked spots across Karnataka, sorted by live distance." },
-    { lang: "hi" as const, code: "हि", title: "हिन्दी", head: "आपके पास की जगहें", body: "कर्नाटक भर की ५१ चुनी हुई जगहें, आपकी दूरी के हिसाब से।" },
-    { lang: "kn" as const, code: "ಕ", title: "ಕನ್ನಡ", head: "ನಿಮ್ಮ ಹತ್ತಿರದ ಸ್ಥಳಗಳು", body: "ಕರ್ನಾಟಕದಾದ್ಯಂತ ೫೧ ಆಯ್ದ ಸ್ಥಳಗಳು, ನಿಮ್ಮ ದೂರದ ಪ್ರಕಾರ." },
-  ];
+function MiniMetric({ label, value }: { label: string; value: string }) {
   return (
-    <section id="languages" className="indigo-grain text-[color:var(--color-cream)]">
-      <div className="mx-auto max-w-6xl px-5 py-24">
-        <span className="section-label !text-[color:var(--color-marigold)]">In your language</span>
-        <h2 className="mt-3 max-w-3xl font-display text-4xl leading-tight md:text-5xl">
-          The internet stopped being English.
-          <br />
-          So did we.
-        </h2>
-        <p className="mt-6 max-w-2xl text-lg text-[color:var(--color-cream)]/85">
-          Kos is trilingual from day one — because most people planning a
-          weekend trip in India aren't planning it in English.
-        </p>
-
-        <div className="mt-12 grid gap-5 md:grid-cols-3">
-          {samples.map((s) => (
-            <button
-              key={s.code}
-              type="button"
-              onClick={() => onLanguageChange(s.lang)}
-              aria-pressed={activeLanguage === s.lang}
-              className={`border p-6 text-left transition-colors ${
-                activeLanguage === s.lang
-                  ? "border-[color:var(--color-marigold)] bg-[color:var(--color-marigold)]/15"
-                  : "border-[color:var(--color-marigold)]/40 bg-[color:var(--color-indigo-soft)]/60 hover:border-[color:var(--color-marigold)]"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-sm bg-[color:var(--color-marigold)] font-mono text-sm font-semibold text-[color:var(--color-indigo)]">
-                  {s.code}
-                </span>
-                <span className="font-display text-xl text-[color:var(--color-marigold)]">
-                  {s.title}
-                </span>
-              </div>
-              <div className="mt-5 font-display text-lg text-[color:var(--color-cream)]">
-                {s.head}
-              </div>
-              <p className="mt-2 text-sm text-[color:var(--color-cream)]/80">{s.body}</p>
-            </button>
-          ))}
-        </div>
-      </div>
-    </section>
+    <div className="rounded-md border border-white/10 bg-black/20 p-3">
+      <p className="text-[0.65rem] uppercase tracking-[0.18em] text-slate-400">{label}</p>
+      <p className="mt-1 text-lg font-black text-white">{value}</p>
+    </div>
   );
 }
 
-function Coverage() {
-  const rows = [
-    { r: "Karnataka", d: "Deep", n: "51 verified places · Ghats, coast, Deccan, North Karnataka heritage" },
-    { r: "Kerala · Tamil Nadu · Goa", d: "Seeded", n: "Major places live · offbeat coverage rolling out" },
-    { r: "Maharashtra · Rajasthan · MP", d: "Seeded", n: "Major places live · fort and heritage belts next" },
-    { r: "Rest of India", d: "Seeded", n: "Every state has anchor places — full depth coming state by state" },
-  ];
+function Tournaments() {
+  const [filter, setFilter] = useState("All");
+  const visible =
+    filter === "All" ? tournaments : tournaments.filter((item) => item.status === filter);
   return (
-    <section id="coverage" className="paper-grain-deep border-y border-[color:var(--color-indigo)]/15">
-      <div className="mx-auto max-w-6xl px-5 py-24">
-        <span className="section-label">Where Kos is live</span>
-        <h2 className="mt-3 max-w-3xl font-display text-4xl leading-tight text-[color:var(--color-indigo)] md:text-5xl">
-          Karnataka first. Then the country, properly.
-        </h2>
-        <p className="mt-4 max-w-2xl text-[color:var(--color-indigo)]/80">
-          We'd rather map one state so well you trust us with the rest, than
-          spread thin across all 28 pretending we know.
-        </p>
-
-        <div className="mt-10 overflow-hidden border border-[color:var(--color-indigo)]/20 bg-[color:var(--color-cream)]">
-          {rows.map((row, i) => (
-            <div
-              key={row.r}
-              className={`grid grid-cols-[minmax(0,1.2fr)_auto_minmax(0,2fr)] items-center gap-4 px-5 py-4 ${
-                i > 0 ? "border-t border-dashed border-[color:var(--color-indigo)]/20" : ""
-              }`}
-            >
-              <div className="min-w-0 font-display text-lg text-[color:var(--color-indigo)]">
-                {row.r}
-              </div>
-              <div
-                className={`shrink-0 rounded-sm px-2 py-1 font-mono text-[0.62rem] uppercase tracking-widest ${
-                  row.d === "Deep"
-                    ? "bg-[color:var(--color-pine)] text-[color:var(--color-cream)]"
-                    : "bg-[color:var(--color-marigold)]/30 text-[color:var(--color-indigo)]"
-                }`}
-              >
-                {row.d}
-              </div>
-              <div className="min-w-0 text-sm text-[color:var(--color-indigo)]/80">{row.n}</div>
-            </div>
-          ))}
-        </div>
-
-        <p className="mt-6 font-mono text-xs text-[color:var(--color-indigo)]/60">
-          → Missing your favourite corner of India? Tell us — user submissions
-          open soon.
-        </p>
-      </div>
-    </section>
-  );
-}
-
-function Who() {
-  const cards = [
-    {
-      t: "The weekend escapist",
-      d: "Two days, one car, no idea where. Kos hands you five options between 40 and 200 km away.",
-    },
-    {
-      t: "The slow traveller",
-      d: "You've done Hampi and Coorg. Kos knows what's an hour past both of them, and whether it's worth it.",
-    },
-    {
-      t: "The local rediscoverer",
-      d: "You grew up somewhere. Kos shows you what's around it that you never bothered to visit.",
-    },
-  ];
-  return (
-    <section className="paper-grain">
-      <div className="mx-auto max-w-6xl px-5 py-24">
-        <span className="section-label">Who Kos is for</span>
-        <h2 className="mt-3 max-w-3xl font-display text-4xl text-[color:var(--color-indigo)] md:text-5xl">
-          If you've ever opened Google Maps and thought "there has to be more."
-        </h2>
-        <div className="mt-12 grid gap-5 md:grid-cols-3">
-          {cards.map((c) => (
-            <div
-              key={c.t}
-              className="border border-[color:var(--color-indigo)]/20 bg-[color:var(--color-cream)] p-6"
-            >
-              <h3 className="font-display text-xl text-[color:var(--color-indigo)]">{c.t}</h3>
-              <p className="mt-3 text-sm text-[color:var(--color-indigo)]/80">{c.d}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function GetTheApp() {
-  const [status, setStatus] = useState<"idle" | "submitting" | "sent" | "error">("idle");
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setStatus("submitting");
-
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-
-    try {
-      const response = await fetch("https://formspree.io/f/mgognqlb", {
-        method: "POST",
-        body: formData,
-        headers: {
-          Accept: "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Formspree submission failed");
-      }
-
-      form.reset();
-      setStatus("sent");
-    } catch {
-      setStatus("error");
-    }
-  }
-
-  return (
-    <section id="get" className="indigo-grain text-[color:var(--color-cream)]">
-      <div className="mx-auto max-w-6xl px-5 py-24">
-        <div className="grid gap-12 md:grid-cols-[1.1fr_1fr] md:gap-20">
-          <div>
-            <span className="section-label !text-[color:var(--color-marigold)]">Start exploring</span>
-            <h2 className="mt-4 font-display text-4xl leading-[1.05] md:text-6xl">
-              The India that{" "}
-              <span className="text-[color:var(--color-marigold)]">doesn't trend</span>
-              <br /> is one tap away.
-            </h2>
-            <p className="mt-6 max-w-lg text-lg text-[color:var(--color-cream)]/85">
-              Open Kos, share your location, and see what's actually near you.
-              Free, no account needed to browse, and it works right in your
-              browser.
-            </p>
-
-            <div className="mt-8 flex flex-wrap gap-4">
-              <a href="#" className="btn-vermillion">
-                Open the web app →
-              </a>
-              <a href="#" className="btn-outline-indigo !border-[color:var(--color-marigold)] !text-[color:var(--color-marigold)] hover:!bg-[color:var(--color-marigold)] hover:!text-[color:var(--color-indigo)]">
-                Get the Android app
-              </a>
-            </div>
-
-            <p className="mt-6 font-mono text-xs text-[color:var(--color-cream)]/60">
-              iOS + offline maps coming soon.
-            </p>
-          </div>
-
-          <form
-            action="https://formspree.io/f/mgognqlb"
-            method="POST"
-            onSubmit={handleSubmit}
-            className="rounded-md border border-[color:var(--color-marigold)]/50 bg-[color:var(--color-indigo-soft)]/70 p-6 md:p-8"
+    <Section
+      id="tournaments"
+      eyebrow="Tournament discovery"
+      title="Filterable tournament cards with slots, dates, fees, maps, and status."
+    >
+      <div className="mb-6 flex flex-wrap gap-2">
+        {["All", "Registration Open", "Closing Soon", "Live", "Completed"].map((item) => (
+          <button
+            key={item}
+            onClick={() => setFilter(item)}
+            className={`rounded-md border px-3 py-2 text-xs font-bold uppercase tracking-[0.14em] ${filter === item ? "border-cyan-300 bg-cyan-300 text-slate-950" : "border-white/10 bg-white/5 text-slate-300"}`}
           >
-            <input type="hidden" name="_subject" value="New Kos launch notification signup" />
-            <div className="font-display text-2xl text-[color:var(--color-marigold)]">
-              Get notified when we launch in your state.
+            {item}
+          </button>
+        ))}
+      </div>
+      <div className="grid gap-5 lg:grid-cols-3">
+        {visible.map((tournament) => (
+          <Card key={tournament.id} className="group overflow-hidden">
+            <div className={`h-36 bg-gradient-to-br ${tournament.accent} relative`}>
+              <div className="grid-overlay absolute inset-0 opacity-40" />
+              <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
+                <Gamepad2 className="h-10 w-10 text-white" />
+                <StatusBadge status={tournament.status} />
+              </div>
             </div>
-            <p className="mt-2 text-sm text-[color:var(--color-cream)]/80">
-              We ship state by state. Drop your email — we'll ping you the day
-              your region goes deep.
-            </p>
-            <div className="mt-6 space-y-4">
-              <label className="block">
-                <span className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-[color:var(--color-marigold)]">
-                  Email
-                </span>
-                <input
-                  name="email"
-                  type="email"
-                  required
-                  maxLength={200}
-                  className="mt-1 block w-full border-b border-[color:var(--color-marigold)]/40 bg-transparent px-1 py-2 text-[color:var(--color-cream)] outline-none placeholder:text-[color:var(--color-cream)]/40 focus:border-[color:var(--color-marigold)]"
+            <div className="p-5">
+              <h3 className="text-2xl font-black uppercase text-white">{tournament.name}</h3>
+              <p className="mt-2 text-sm text-slate-400">
+                {tournament.mode} - {tournament.map}
+              </p>
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <MiniMetric label="Prize" value={tournament.prize} />
+                <MiniMetric label="Entry" value={tournament.fee} />
+                <MiniMetric label="Slots" value={`${tournament.registered}/${tournament.slots}`} />
+                <MiniMetric label="Start" value={tournament.starts} />
+              </div>
+              <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-cyan-300"
+                  style={{ width: `${(tournament.registered / tournament.slots) * 100}%` }}
                 />
-              </label>
-              <label className="block">
-                <span className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-[color:var(--color-marigold)]">
-                  State / region (optional)
-                </span>
-                <input
-                  name="region"
-                  type="text"
-                  maxLength={100}
-                  className="mt-1 block w-full border-b border-[color:var(--color-marigold)]/40 bg-transparent px-1 py-2 text-[color:var(--color-cream)] outline-none placeholder:text-[color:var(--color-cream)]/40 focus:border-[color:var(--color-marigold)]"
-                />
-              </label>
+              </div>
+              <div className="mt-5 flex gap-3">
+                <a href="#register" className="neon-button flex-1">
+                  Register
+                </a>
+                <a href="#leaderboard" className="ghost-button flex-1">
+                  Details
+                </a>
+              </div>
             </div>
-            <button
-              type="submit"
-              disabled={status === "submitting" || status === "sent"}
-              className="btn-vermillion mt-8 w-full disabled:opacity-60"
-            >
-              {status === "sent"
-                ? "Got it — thanks ✓"
-                : status === "error"
-                  ? "Try again →"
-                : status === "submitting"
-                  ? "Sending…"
-                  : "Keep me posted →"}
+          </Card>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+function Registration() {
+  const steps = ["Tournament", "Team", "Captain", "Roster", "Payment", "Review"];
+  const [step, setStep] = useState(0);
+  const [teamName, setTeamName] = useState("Velocity Reign Academy");
+  return (
+    <Section
+      id="register"
+      eyebrow="Team registration"
+      title="Six-step captain workflow with validation-ready fields, payment proof, roster rules, and receipt generation."
+    >
+      <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
+        <Card className="p-5">
+          <div className="space-y-3">
+            {steps.map((label, index) => (
+              <button
+                key={label}
+                onClick={() => setStep(index)}
+                className={`flex w-full items-center gap-3 rounded-md border p-3 text-left ${step === index ? "border-cyan-300 bg-cyan-300/15" : "border-white/10 bg-white/5"}`}
+              >
+                <span className="grid h-8 w-8 place-items-center rounded-md bg-white/10 text-sm font-black text-white">
+                  {index + 1}
+                </span>
+                <span className="font-bold text-white">{label}</span>
+                {index < step ? (
+                  <CheckCircle2 className="ml-auto h-4 w-4 text-emerald-300" />
+                ) : null}
+              </button>
+            ))}
+          </div>
+        </Card>
+        <Card className="p-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-cyan-300">
+                Step {step + 1} of 6
+              </p>
+              <h3 className="mt-2 text-2xl font-black uppercase text-white">{steps[step]}</h3>
+            </div>
+            <StatusBadge status="Verification Pending" />
+          </div>
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            {step === 0 ? (
+              <>
+                <Field label="Selected tournament" value="Nebula Masters Invitational" />
+                <Field label="Entry fee" value="₹799" />
+                <Field label="Available slots" value="16 slots left" />
+                <Field label="Registration deadline" value="10 Aug 2026" />
+              </>
+            ) : step === 1 ? (
+              <>
+                <Field label="Team name" value={teamName} onChange={setTeamName} />
+                <Field label="Short name" value="VRA" />
+                <Field label="Region" value="Delhi NCR" />
+                <Field label="Preferred drop" value="School / Apartments" />
+              </>
+            ) : step === 2 ? (
+              <>
+                <Field label="Captain full name" value="Aarav Mehta" />
+                <Field label="BGMI name" value="VRN Blaze" />
+                <Field label="BGMI UID" value="58493027162" />
+                <Field label="WhatsApp" value="+91 98765 43210" />
+              </>
+            ) : step === 3 ? (
+              ["IGL", "Assaulter", "Sniper", "Support", "Substitute", "Coach"].map(
+                (role, index) => (
+                  <Field
+                    key={role}
+                    label={role}
+                    value={index < 4 ? `Player ${index + 1} - UID locked` : "Optional slot"}
+                  />
+                ),
+              )
+            ) : step === 4 ? (
+              <>
+                <Field label="UPI ID" value="nexbattles@upi" />
+                <Field label="Transaction ID" value="TXN98162276" />
+                <Uploader label="Payment screenshot" />
+                <Field label="Payment status" value="Verification Pending" />
+              </>
+            ) : (
+              <>
+                <Field label="Generated Team ID" value="BGM-2026-0001" />
+                <Field label="Registration no." value="NB-NEBULA-048" />
+                <Field label="Fair-play agreement" value="Accepted" />
+                <Field label="Printable receipt" value="Ready after submission" />
+              </>
+            )}
+          </div>
+          <div className="mt-6 flex flex-wrap justify-between gap-3">
+            <button onClick={() => setStep(Math.max(0, step - 1))} className="ghost-button">
+              Back
             </button>
-            <p className="mt-4 font-mono text-[0.62rem] uppercase tracking-widest text-[color:var(--color-cream)]/50">
-              {status === "error"
-                ? "Something went wrong. Please try again."
-                : "Submissions go straight to the Kos Formspree inbox."}
-            </p>
-          </form>
+            <button
+              onClick={() => setStep(Math.min(steps.length - 1, step + 1))}
+              className="neon-button"
+            >
+              {step === steps.length - 1 ? "Submit Registration" : "Continue"}
+            </button>
+          </div>
+        </Card>
+      </div>
+    </Section>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange?: (value: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-slate-400">
+        {label}
+      </span>
+      <input
+        value={value}
+        onChange={(event) => onChange?.(event.target.value)}
+        readOnly={!onChange}
+        className="mt-2 w-full rounded-md border border-white/10 bg-black/25 px-3 py-3 text-sm text-white outline-none focus:border-cyan-300"
+      />
+    </label>
+  );
+}
+
+function Uploader({ label }: { label: string }) {
+  return (
+    <div className="rounded-md border border-dashed border-cyan-300/40 bg-cyan-300/5 p-4">
+      <Upload className="h-5 w-5 text-cyan-200" />
+      <p className="mt-2 text-sm font-bold text-white">{label}</p>
+      <p className="text-xs text-slate-400">PNG, JPG, WebP up to 5 MB</p>
+    </div>
+  );
+}
+
+function Leaderboard() {
+  const [query, setQuery] = useState("");
+  const filtered = teams.filter((team) => team.name.toLowerCase().includes(query.toLowerCase()));
+  return (
+    <Section
+      id="leaderboard"
+      eyebrow="Live leaderboard"
+      title="Automatic placement plus finish scoring, penalties, tie-break signals, and mobile-ready standings."
+    >
+      <Card className="p-5">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 rounded-md border border-white/10 bg-black/25 px-3 py-2">
+            <Search className="h-4 w-4 text-slate-400" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search team"
+              className="bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button className="ghost-button">
+              <Filter className="h-4 w-4" /> Phase
+            </button>
+            <button className="ghost-button">
+              <Download className="h-4 w-4" /> Export CSV
+            </button>
+          </div>
+        </div>
+        <div className="hidden overflow-x-auto lg:block">
+          <table className="w-full min-w-[900px] border-collapse text-left">
+            <thead>
+              <tr className="border-b border-white/10 text-[0.68rem] uppercase tracking-[0.18em] text-slate-400">
+                {[
+                  "Rank",
+                  "Team",
+                  "MP",
+                  "WWCD",
+                  "Placement",
+                  "Finishes",
+                  "Penalty",
+                  "Total",
+                  "Form",
+                ].map((head) => (
+                  <th key={head} className="px-3 py-3">
+                    {head}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((team) => (
+                <tr key={team.name} className="border-b border-white/10 text-sm">
+                  <td className="px-3 py-4">
+                    <Rank rank={team.rank} />
+                  </td>
+                  <td className="px-3 py-4">
+                    <TeamIdentity team={team} />
+                  </td>
+                  <td className="px-3 py-4 text-slate-300">{team.matches}</td>
+                  <td className="px-3 py-4 text-slate-300">{team.wwcd}</td>
+                  <td className="px-3 py-4 text-slate-300">{team.placement}</td>
+                  <td className="px-3 py-4 text-slate-300">{team.finishes}</td>
+                  <td className="px-3 py-4 text-red-200">-{team.penalty}</td>
+                  <td className="px-3 py-4 text-xl font-black text-cyan-200">
+                    {totalPoints(team)}
+                  </td>
+                  <td className="px-3 py-4">
+                    <FormPills form={team.form} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="grid gap-3 lg:hidden">
+          {filtered.map((team) => (
+            <div key={team.name} className="rounded-md border border-white/10 bg-white/[0.03] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <TeamIdentity team={team} />
+                <Rank rank={team.rank} />
+              </div>
+              <div className="mt-4 grid grid-cols-4 gap-2 text-center">
+                <MiniMetric label="WWCD" value={String(team.wwcd)} />
+                <MiniMetric label="Fin" value={String(team.finishes)} />
+                <MiniMetric label="Pen" value={`-${team.penalty}`} />
+                <MiniMetric label="Total" value={String(totalPoints(team))} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </Section>
+  );
+}
+
+function Rank({ rank }: { rank: number }) {
+  return (
+    <span
+      className={`grid h-9 w-9 place-items-center rounded-md font-black ${rank === 1 ? "bg-amber-300 text-black shadow-[0_0_18px_rgba(252,211,77,0.45)]" : rank === 2 ? "bg-slate-300 text-black" : rank === 3 ? "bg-orange-400 text-black" : "bg-white/10 text-white"}`}
+    >
+      {rank}
+    </span>
+  );
+}
+
+function TeamIdentity({ team }: { team: Team }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="grid h-10 w-10 place-items-center rounded-md border border-cyan-300/30 bg-cyan-300/10 text-xs font-black text-cyan-100">
+        {team.short}
+      </span>
+      <div>
+        <p className="font-bold text-white">{team.name}</p>
+        <p className="text-xs text-slate-400">
+          {team.region} - Captain {team.captain}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function FormPills({ form }: { form: string[] }) {
+  return (
+    <div className="flex gap-1">
+      {form.map((item, index) => (
+        <span
+          key={`${item}-${index}`}
+          className="grid h-7 w-7 place-items-center rounded-sm bg-white/10 text-[0.68rem] font-bold text-slate-200"
+        >
+          {item}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function ScheduleAndRooms() {
+  return (
+    <Section
+      id="schedule"
+      eyebrow="Match control"
+      title="Schedule, room-release timing, check-in status, and hidden credentials for approved teams only."
+    >
+      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <Card className="p-5">
+          <div className="space-y-3">
+            {schedules.map(([match, date, time, map, status, group]) => (
+              <div
+                key={match}
+                className="grid gap-3 rounded-md border border-white/10 bg-white/[0.03] p-4 md:grid-cols-[1fr_auto_auto] md:items-center"
+              >
+                <div>
+                  <p className="font-black uppercase text-white">{match}</p>
+                  <p className="text-sm text-slate-400">
+                    {date} - {time} - {group}
+                  </p>
+                </div>
+                <span className="text-sm font-bold text-cyan-200">{map}</span>
+                <StatusBadge status={status} />
+              </div>
+            ))}
+          </div>
+        </Card>
+        <Card className="p-5">
+          <div className="flex items-center gap-3">
+            <Lock className="h-5 w-5 text-cyan-200" />
+            <h3 className="text-xl font-black uppercase text-white">Room Vault</h3>
+          </div>
+          <div className="mt-5 space-y-3">
+            <MiniMetric label="Room ID" value="7365 9821" />
+            <MiniMetric label="Password" value="NBX#29" />
+            <MiniMetric label="Release rule" value="Approved teams only" />
+          </div>
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <button className="ghost-button">Copy ID</button>
+            <button className="ghost-button">Check In</button>
+          </div>
+          <div className="mt-5 rounded-md border border-emerald-300/30 bg-emerald-300/10 p-4">
+            <QrCode className="h-8 w-8 text-emerald-200" />
+            <p className="mt-2 font-bold text-white">Team QR check-in generated</p>
+            <p className="text-sm text-slate-400">Duplicate scans are blocked and logged.</p>
+          </div>
+        </Card>
+      </div>
+    </Section>
+  );
+}
+
+function Dashboard() {
+  const notices = [
+    "Registration approved",
+    "Payment verified",
+    "Roster locks on 10 Aug",
+    "Room M1 released at 6:40 PM",
+  ];
+  return (
+    <Section
+      id="teams"
+      eyebrow="Captain dashboard"
+      title="Captain workspace for roster, room details, penalties, notices, downloads, transfers, and settings."
+    >
+      <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
+        <Card className="p-4">
+          {[
+            "Overview",
+            "Registration",
+            "Team Profile",
+            "Roster",
+            "Match Schedule",
+            "Room Details",
+            "Results",
+            "Penalties",
+            "Notifications",
+            "Downloads",
+            "Transfers",
+            "Settings",
+          ].map((item, index) => (
+            <button
+              key={item}
+              className={`mb-2 flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-bold ${index === 0 ? "bg-cyan-300 text-slate-950" : "bg-white/5 text-slate-300"}`}
+            >
+              <Gauge className="h-4 w-4" /> {item}
+            </button>
+          ))}
+        </Card>
+        <div className="grid gap-5">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <Stat label="Team ID" value="BGM-2026-0001" icon={Shield} />
+            <Stat label="Current rank" value="#1" icon={Crown} />
+            <Stat label="Total points" value="170" icon={Zap} />
+            <Stat label="WWCD" value="04" icon={Trophy} />
+          </div>
+          <Card className="p-5">
+            <h3 className="text-xl font-black uppercase text-white">Registration Timeline</h3>
+            <div className="mt-5 grid gap-3 md:grid-cols-5">
+              {["Draft", "Submitted", "Under Review", "Payment Verified", "Approved"].map(
+                (item) => (
+                  <div
+                    key={item}
+                    className="rounded-md border border-emerald-300/30 bg-emerald-300/10 p-3"
+                  >
+                    <CheckCircle2 className="h-5 w-5 text-emerald-200" />
+                    <p className="mt-2 text-sm font-bold text-white">{item}</p>
+                  </div>
+                ),
+              )}
+            </div>
+          </Card>
+          <div className="grid gap-5 lg:grid-cols-2">
+            <Card className="p-5">
+              <h3 className="text-xl font-black uppercase text-white">Roster Lock</h3>
+              <div className="mt-4 grid gap-3">
+                {[
+                  "VRN Blaze - IGL",
+                  "VRN Venom - Assaulter",
+                  "VRN Scope - Sniper",
+                  "VRN Pulse - Support",
+                  "VRN Echo - Substitute",
+                ].map((player) => (
+                  <div
+                    key={player}
+                    className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-sm font-bold text-slate-200"
+                  >
+                    {player}
+                  </div>
+                ))}
+              </div>
+            </Card>
+            <Card className="p-5">
+              <h3 className="text-xl font-black uppercase text-white">Latest Notices</h3>
+              <div className="mt-4 space-y-3">
+                {notices.map((notice) => (
+                  <div
+                    key={notice}
+                    className="flex items-center gap-3 rounded-md border border-white/10 bg-white/[0.03] p-3"
+                  >
+                    <Bell className="h-4 w-4 text-cyan-200" />
+                    <span className="text-sm font-bold text-slate-200">{notice}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
         </div>
       </div>
-    </section>
+    </Section>
+  );
+}
+
+function DropMapAndStats() {
+  const chartData = teams
+    .slice(0, 6)
+    .map((team) => ({ name: team.short, points: totalPoints(team), finishes: team.finishes }));
+  const pieData = [
+    { name: "Erangel", value: 42 },
+    { name: "Miramar", value: 25 },
+    { name: "Sanhok", value: 18 },
+    { name: "Vikendi", value: 15 },
+  ];
+  return (
+    <Section
+      id="statistics"
+      eyebrow="Strategy and analytics"
+      title="Drop-location heatmaps, team statistics, points progression, finishes, and season ranking signals."
+    >
+      <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+        <Card className="relative min-h-[430px] overflow-hidden p-5">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(34,211,238,0.16),transparent_22%),radial-gradient(circle_at_70%_60%,rgba(244,63,94,0.14),transparent_25%)]" />
+          <div className="grid-overlay absolute inset-0 opacity-40" />
+          <div className="relative z-10 flex items-center justify-between">
+            <h3 className="text-xl font-black uppercase text-white">Erangel Drop Map</h3>
+            <MapPinned className="h-5 w-5 text-cyan-200" />
+          </div>
+          {teams.slice(0, 7).map((team, index) => (
+            <div
+              key={team.name}
+              className="absolute rounded-md border border-cyan-300/40 bg-cyan-300/15 px-2 py-1 text-xs font-black text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.24)]"
+              style={{ left: `${12 + ((index * 13) % 72)}%`, top: `${22 + ((index * 17) % 58)}%` }}
+            >
+              {team.short}
+              <span className="ml-1 text-slate-300">{team.drop}</span>
+            </div>
+          ))}
+          <div className="absolute bottom-5 left-5 right-5 z-10 rounded-md border border-white/10 bg-black/40 p-3 text-sm text-slate-300 backdrop-blur">
+            Overlapping drops are highlighted with neon markers; split-drop paths render as glowing
+            lines in admin strategy mode.
+          </div>
+        </Card>
+        <div className="grid gap-5">
+          <Card className="p-5">
+            <h3 className="text-xl font-black uppercase text-white">Points Progression</h3>
+            <div className="mt-4 h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                  <CartesianGrid stroke="rgba(255,255,255,.08)" />
+                  <XAxis dataKey="name" stroke="#94a3b8" />
+                  <YAxis stroke="#94a3b8" />
+                  <Tooltip
+                    contentStyle={{
+                      background: "#080b14",
+                      border: "1px solid rgba(255,255,255,.12)",
+                      color: "#fff",
+                    }}
+                  />
+                  <Bar dataKey="points" fill="#22d3ee" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="finishes" fill="#d946ef" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+          <div className="grid gap-5 md:grid-cols-2">
+            <Card className="p-5">
+              <h3 className="text-lg font-black uppercase text-white">Map Distribution</h3>
+              <div className="mt-4 h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={pieData} innerRadius={48} outerRadius={78} dataKey="value">
+                      {["#22d3ee", "#d946ef", "#f43f5e", "#a3e635"].map((color) => (
+                        <Cell key={color} fill={color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        background: "#080b14",
+                        border: "1px solid rgba(255,255,255,.12)",
+                        color: "#fff",
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+            <Card className="p-5">
+              <h3 className="text-lg font-black uppercase text-white">Scoring Rule</h3>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                {Object.entries(placementPoints).map(([place, points]) => (
+                  <MiniMetric key={place} label={`${place} place`} value={`${points} pts`} />
+                ))}
+              </div>
+              <p className="mt-4 text-sm text-slate-400">
+                Formula: placement + finishes - penalties. Ties: WWCD, finishes, placement points,
+                latest match.
+              </p>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+function ContentPages() {
+  const rules = [
+    "Eligibility",
+    "Team composition",
+    "Player verification",
+    "Lobby rules",
+    "Device rules",
+    "Fair-play policy",
+    "Point system",
+    "Penalty system",
+    "Disconnect policy",
+    "Protest and appeals",
+    "Prize distribution",
+    "Disqualification",
+  ];
+  const gallery = [
+    ["Posters", Image],
+    ["Match Highlights", Video],
+    ["Winner Photos", Trophy],
+    ["Behind The Scenes", CameraIcon],
+    ["Tournament Moments", Zap],
+    ["YouTube Embeds", Video],
+  ] as Array<[string, Icon]>;
+  return (
+    <Section
+      id="rules"
+      eyebrow="Public content"
+      title="Rules, announcements, hall of fame, media gallery, contact support, and notification surfaces."
+    >
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="p-5">
+          <h3 className="text-xl font-black uppercase text-white">Announcements</h3>
+          <div className="mt-4 space-y-3">
+            {announcements.map(([category, title, state, date]) => (
+              <div key={title} className="rounded-md border border-white/10 bg-white/[0.03] p-3">
+                <div className="flex justify-between gap-3">
+                  <span className="text-xs font-bold uppercase tracking-[0.14em] text-cyan-200">
+                    {category}
+                  </span>
+                  <span className="text-xs text-slate-500">{date}</span>
+                </div>
+                <p className="mt-2 text-sm font-bold text-white">{title}</p>
+                <p className="mt-1 text-xs text-slate-400">{state}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+        <Card className="p-5">
+          <h3 className="text-xl font-black uppercase text-white">Rules Library</h3>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            {rules.map((rule) => (
+              <button
+                key={rule}
+                className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-left text-xs font-bold text-slate-300 hover:border-cyan-300/50"
+              >
+                {rule}
+              </button>
+            ))}
+          </div>
+          <button className="ghost-button mt-4 w-full">
+            <FileText className="h-4 w-4" /> Download Rules PDF
+          </button>
+        </Card>
+        <Card id="gallery" className="p-5">
+          <h3 className="text-xl font-black uppercase text-white">Media Gallery</h3>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {gallery.map(([label, IconComponent]) => (
+              <div
+                key={label}
+                className="rounded-md border border-white/10 bg-gradient-to-br from-white/10 to-white/[0.02] p-4"
+              >
+                <IconComponent className="h-5 w-5 text-fuchsia-200" />
+                <p className="mt-3 text-sm font-bold text-white">{label}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </Section>
+  );
+}
+
+function CameraIcon(props: SVGProps<SVGSVGElement>) {
+  return <Image {...props} />;
+}
+
+function AdminPanel() {
+  const revenueData = [
+    { day: "Mon", registrations: 12, revenue: 18 },
+    { day: "Tue", registrations: 19, revenue: 28 },
+    { day: "Wed", registrations: 15, revenue: 24 },
+    { day: "Thu", registrations: 28, revenue: 42 },
+    { day: "Fri", registrations: 34, revenue: 55 },
+    { day: "Sat", registrations: 41, revenue: 68 },
+  ];
+  return (
+    <Section
+      id="admin"
+      eyebrow="Protected admin panel"
+      title="Operations dashboard for tournaments, registrations, results, penalties, transfers, seasons, exports, and audit logs."
+    >
+      <div className="grid gap-6 lg:grid-cols-[250px_1fr]">
+        <Card className="p-4">
+          {[
+            "Dashboard",
+            "Tournaments",
+            "Registrations",
+            "Teams",
+            "Players",
+            "Matches",
+            "Results",
+            "Leaderboard",
+            "Drop Locations",
+            "Announcements",
+            "Notifications",
+            "Penalties",
+            "Transfers",
+            "Gallery",
+            "Hall of Fame",
+            "Seasons",
+            "Exports",
+            "Settings",
+            "Audit Logs",
+          ].map((item, index) => (
+            <button
+              key={item}
+              className={`mb-2 flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-xs font-bold ${index === 0 ? "bg-fuchsia-400 text-slate-950" : "bg-white/5 text-slate-300"}`}
+            >
+              <Shield className="h-4 w-4" /> {item}
+            </button>
+          ))}
+        </Card>
+        <div className="grid gap-5">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <Stat label="Active events" value="03" icon={Trophy} />
+            <Stat label="Pending regs" value="18" icon={ClipboardCheck} />
+            <Stat label="Entry fees" value="₹1.84L" icon={Database} />
+            <Stat label="Open appeals" value="04" icon={MessageCircle} />
+          </div>
+          <div className="grid gap-5 lg:grid-cols-[1fr_0.9fr]">
+            <Card className="p-5">
+              <h3 className="text-xl font-black uppercase text-white">Registrations and Revenue</h3>
+              <div className="mt-4 h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={revenueData}>
+                    <defs>
+                      <linearGradient id="cyan" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.65} />
+                        <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke="rgba(255,255,255,.08)" />
+                    <XAxis dataKey="day" stroke="#94a3b8" />
+                    <YAxis stroke="#94a3b8" />
+                    <Tooltip
+                      contentStyle={{
+                        background: "#080b14",
+                        border: "1px solid rgba(255,255,255,.12)",
+                        color: "#fff",
+                      }}
+                    />
+                    <Area dataKey="registrations" stroke="#22d3ee" fill="url(#cyan)" />
+                    <Line dataKey="revenue" stroke="#d946ef" strokeWidth={3} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+            <Card className="p-5">
+              <h3 className="text-xl font-black uppercase text-white">Fast Result Entry</h3>
+              <div className="mt-4 grid gap-3">
+                <Field label="Match" value="Grand Final M1" />
+                <Field label="Team" value="Velocity Reign" />
+                <Field label="Placement" value="1" />
+                <Field label="Finishes" value="14" />
+                <Field label="Auto total" value={`${placementPoints[1] + 14} pts`} />
+              </div>
+              <button className="neon-button mt-4 w-full">Publish Result</button>
+            </Card>
+          </div>
+          <Card className="p-5">
+            <h3 className="text-xl font-black uppercase text-white">Production Modules</h3>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              {[
+                "RBAC and protected routes",
+                "Zod form validation",
+                "Secure uploads",
+                "Room credential release",
+                "Audit logs",
+                "CSV and Excel exports",
+                "Public read-only APIs",
+                "API keys and rate limits",
+                "Notifications and Discord hooks",
+                "QR check-in scanner",
+                "Transfer review history",
+                "Multi-season rankings",
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-sm font-bold text-slate-200"
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      </div>
+    </Section>
   );
 }
 
 function Footer() {
   return (
-    <footer className="bg-[color:var(--color-ink)] text-[color:var(--color-cream)]/80">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-5 py-10 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-3">
-          <KosMark className="h-7 w-6 text-[color:var(--color-marigold)]" />
-          <div className="leading-tight">
-            <div className="font-display text-xl text-[color:var(--color-cream)]">Kos</div>
-            <div className="font-mono text-[0.6rem] uppercase tracking-[0.24em] text-[color:var(--color-marigold)]">
-              Find what's past the milestone.
-            </div>
-          </div>
+    <footer className="border-t border-white/10 bg-[#05060c]">
+      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 lg:grid-cols-[1fr_1fr_1fr] lg:px-6">
+        <div>
+          <p className="text-xl font-black uppercase tracking-[0.12em] text-white">
+            NexBattles BGMI
+          </p>
+          <p className="mt-3 text-sm leading-6 text-slate-400">
+            Original esports tournament management platform for production demonstrations, organizer
+            operations, and player-facing tournament experiences.
+          </p>
         </div>
-        <nav className="flex flex-wrap gap-6 font-mono text-xs uppercase tracking-widest">
-          <a href="#how" className="hover:text-[color:var(--color-marigold)]">How it works</a>
-          <a href="#discover" className="hover:text-[color:var(--color-marigold)]">Discover</a>
-          <a href="#coverage" className="hover:text-[color:var(--color-marigold)]">Coverage</a>
-          <a href="#" className="hover:text-[color:var(--color-marigold)]">Privacy</a>
-          <a href="#" className="hover:text-[color:var(--color-marigold)]">Contact</a>
-        </nav>
-        <div className="font-mono text-[0.65rem] uppercase tracking-widest text-[color:var(--color-cream)]/50">
-          © {new Date().getFullYear()} Kos · Bengaluru
+        <div className="grid grid-cols-2 gap-2 text-sm text-slate-300">
+          {[
+            "Home",
+            "Tournaments",
+            "Register",
+            "Leaderboard",
+            "Schedule",
+            "Teams",
+            "Rules",
+            "Contact",
+          ].map((item) => (
+            <a key={item} href={`#${item.toLowerCase()}`} className="hover:text-cyan-200">
+              {item}
+            </a>
+          ))}
+        </div>
+        <div className="text-sm text-slate-400">
+          <p className="font-bold text-white">Organizer Contact</p>
+          <p className="mt-2">support@nexbattles.example</p>
+          <p>WhatsApp: +91 90000 00000</p>
+          <p>Discord: NexBattles HQ</p>
         </div>
       </div>
     </footer>
   );
 }
 
-function KosLanding() {
-  const [activeLanguage, setActiveLanguage] = useState<LanguageCode>("en");
-
+function Section({
+  id,
+  eyebrow,
+  title,
+  children,
+}: {
+  id: string;
+  eyebrow: string;
+  title: string;
+  children: ReactNode;
+}) {
   return (
-    <div className="min-h-screen" lang={activeLanguage}>
-      <Nav activeLanguage={activeLanguage} onLanguageChange={setActiveLanguage} />
+    <section
+      id={id}
+      className="relative border-t border-white/10 bg-[#070912] px-4 py-16 lg:px-6 lg:py-24"
+    >
+      <div className="grid-overlay absolute inset-0 opacity-20" />
+      <div className="relative z-10 mx-auto max-w-7xl">
+        <div className="mb-10 max-w-4xl">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">{eyebrow}</p>
+          <h2 className="mt-3 text-3xl font-black uppercase leading-tight text-white md:text-5xl">
+            {title}
+          </h2>
+        </div>
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function BgmiTournamentApp() {
+  return (
+    <div className="min-h-screen bg-[#05060c] text-slate-100">
+      <AppNav />
       <main>
-        <Hero activeLanguage={activeLanguage} />
-        <HowItWorks />
-        <Discover />
-        <Languages activeLanguage={activeLanguage} onLanguageChange={setActiveLanguage} />
-        <Coverage />
-        <Who />
-        <GetTheApp />
+        <Hero />
+        <Tournaments />
+        <Registration />
+        <Leaderboard />
+        <ScheduleAndRooms />
+        <Dashboard />
+        <DropMapAndStats />
+        <ContentPages />
+        <AdminPanel />
       </main>
       <Footer />
     </div>

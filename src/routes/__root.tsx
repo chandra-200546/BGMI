@@ -77,18 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Kos — Find what's past the milestone" },
+      { title: "NexBattles BGMI - Esports Tournament Platform" },
       {
         name: "description",
         content:
-          "Kos is a travel discovery platform surfacing India's hidden, offbeat destinations — with live distance and directions from wherever you stand.",
+          "Premium BGMI esports tournament management for team registration, live leaderboards, schedules, room release, notifications, and admin operations.",
       },
-      { name: "author", content: "Kos" },
-      { property: "og:title", content: "Kos — Find what's past the milestone" },
+      { name: "author", content: "NexBattles" },
+      { property: "og:title", content: "NexBattles BGMI - Tournament Command Center" },
       {
         property: "og:description",
         content:
-          "India-focused travel discovery for the places mainstream apps miss. Investor page.",
+          "A futuristic esports command center for BGMI organizers, captains, players, and spectators.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -100,7 +100,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Yatra+One&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap",
       },
     ],
   }),

@@ -19,178 +19,179 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  --color-indigo: #1B2A4A;
-  --color-indigo-soft: #24365E;
-  --color-cream: #E9E0C9;
-  --color-cream-deep: #DDD1B3;
-  --color-vermillion: #B23A2F;
-  --color-vermillion-deep: #8F2C22;
-  --color-marigold: #D9A441;
-  --color-pine: #2F5233;
-  --color-ink: #12172A;
-
-  --font-display: "Yatra One", "DM Serif Display", serif;
-  --font-sans: "Work Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Rajdhani", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   --radius-sm: 4px;
   --radius-md: 6px;
-  --radius-lg: 10px;
-  --radius-xl: 14px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
 }
 
 :root {
-  --background: #E9E0C9;
-  --foreground: #12172A;
-  --card: #F1E9D4;
-  --card-foreground: #12172A;
-  --primary: #B23A2F;
-  --primary-foreground: #F5EFDF;
-  --muted: #DDD1B3;
-  --muted-foreground: #5A5544;
-  --accent: #D9A441;
-  --accent-foreground: #12172A;
-  --border: #C7B98F;
-  --input: #C7B98F;
-  --ring: #B23A2F;
+  --background: #05060c;
+  --foreground: #f8fafc;
+  --card: #0b1020;
+  --card-foreground: #f8fafc;
+  --primary: #22d3ee;
+  --primary-foreground: #061019;
+  --muted: #111827;
+  --muted-foreground: #94a3b8;
+  --accent: #d946ef;
+  --accent-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #22d3ee;
 }
 
 @layer base {
   * {
-    border-color: var(--color-border);
+    border-color: var(--border);
   }
+
   html {
     scroll-behavior: smooth;
   }
+
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
+    margin: 0;
+    background:
+      radial-gradient(circle at 12% 8%, rgba(34, 211, 238, 0.16), transparent 28rem),
+      radial-gradient(circle at 88% 14%, rgba(217, 70, 239, 0.14), transparent 28rem),
+      #05060c;
+    color: var(--foreground);
     font-family: var(--font-sans);
     font-feature-settings: "ss01", "cv11";
     -webkit-font-smoothing: antialiased;
   }
-  h1, h2, h3, h4 {
-    font-family: var(--font-display);
-    letter-spacing: -0.01em;
+
+  ::selection {
+    background: rgba(34, 211, 238, 0.35);
+    color: white;
+  }
+
+  button,
+  a,
+  input {
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
-/* Aged-paper grain texture for cream sections */
-@utility paper-grain {
-  background-color: var(--color-cream);
-  background-image:
-    radial-gradient(circle at 25% 15%, rgba(27, 42, 74, 0.05) 0.5px, transparent 1px),
-    radial-gradient(circle at 75% 65%, rgba(178, 58, 47, 0.045) 0.5px, transparent 1px),
-    radial-gradient(circle at 55% 85%, rgba(47, 82, 51, 0.04) 0.5px, transparent 1px);
-  background-size: 22px 22px, 31px 31px, 47px 47px;
-}
-
-@utility paper-grain-deep {
-  background-color: var(--color-cream-deep);
-  background-image:
-    radial-gradient(circle at 20% 20%, rgba(27, 42, 74, 0.06) 0.5px, transparent 1px),
-    radial-gradient(circle at 70% 60%, rgba(178, 58, 47, 0.05) 0.5px, transparent 1px);
-  background-size: 24px 24px, 37px 37px;
-}
-
-@utility indigo-grain {
-  background-color: var(--color-indigo);
-  background-image:
-    radial-gradient(circle at 30% 20%, rgba(217, 164, 65, 0.08) 0.5px, transparent 1px),
-    radial-gradient(circle at 70% 70%, rgba(233, 224, 201, 0.05) 0.5px, transparent 1px);
-  background-size: 26px 26px, 41px 41px;
-}
-
-/* Milestone marker — kos minar inspired stamp */
-@utility milestone {
+@utility glass-panel {
   position: relative;
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 1.25rem 1rem 1rem;
-  min-width: 9rem;
-  color: var(--color-cream);
-  background: var(--color-indigo);
-  border-radius: 6rem 6rem 0.5rem 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.025)),
+    rgba(8, 11, 20, 0.82);
   box-shadow:
-    inset 0 0 0 2px var(--color-marigold),
-    inset 0 0 0 4px var(--color-indigo),
-    inset 0 0 0 5px rgba(217, 164, 65, 0.5),
-    0 6px 0 -2px rgba(18, 23, 42, 0.25);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 24px 80px -36px rgba(34, 211, 238, 0.38);
+  backdrop-filter: blur(18px);
 }
 
-@utility milestone-cream {
-  color: var(--color-indigo);
-  background: var(--color-cream);
-  box-shadow:
-    inset 0 0 0 2px var(--color-vermillion),
-    inset 0 0 0 4px var(--color-cream),
-    inset 0 0 0 5px rgba(178, 58, 47, 0.4),
-    0 6px 0 -2px rgba(178, 58, 47, 0.2);
+@utility hud-card {
+  overflow: hidden;
 }
 
-@utility stamp-border {
-  border: 1.5px dashed var(--color-indigo);
-  border-radius: 4px;
-  position: relative;
+@utility hud-card {
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(90deg, rgba(34, 211, 238, 0.34), transparent 22%, transparent 78%, rgba(217, 70, 239, 0.3)),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 28%);
+    mask-image: linear-gradient(#000, transparent 70%);
+  }
 }
 
-@utility btn-vermillion {
+@utility grid-overlay {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-size: 42px 42px;
+}
+
+@utility neon-button {
   display: inline-flex;
+  min-height: 2.75rem;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.875rem 1.5rem;
-  background: var(--color-vermillion);
-  color: #F5EFDF;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  border-radius: 3px;
-  box-shadow: 0 3px 0 var(--color-vermillion-deep);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-@utility btn-vermillion {
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 0 var(--color-vermillion-deep);
-  }
-  &:active {
-    transform: translateY(2px);
-    box-shadow: 0 1px 0 var(--color-vermillion-deep);
-  }
-}
-
-@utility btn-outline-indigo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.8125rem 1.4rem;
-  background: transparent;
-  color: var(--color-indigo);
-  font-weight: 600;
-  border: 1.5px solid var(--color-indigo);
-  border-radius: 3px;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-@utility btn-outline-indigo {
-  &:hover {
-    background: var(--color-indigo);
-    color: var(--color-cream);
-  }
-}
-
-@utility section-label {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.28em;
+  border-radius: 6px;
+  border: 1px solid rgba(103, 232, 249, 0.6);
+  background: linear-gradient(135deg, #67e8f9, #22d3ee 55%, #a5f3fc);
+  padding: 0.75rem 1rem;
+  color: #061019;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-vermillion);
+  box-shadow:
+    0 0 24px rgba(34, 211, 238, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    filter 0.16s ease;
 }
 
-@utility divider-stamp {
-  height: 1px;
-  background-image: linear-gradient(to right, var(--color-indigo) 50%, transparent 50%);
-  background-size: 8px 1px;
+@utility neon-button {
+  &:hover {
+    filter: saturate(1.1);
+    transform: translateY(-1px);
+    box-shadow:
+      0 0 34px rgba(34, 211, 238, 0.38),
+      inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  }
+}
+
+@utility ghost-button {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.055);
+  padding: 0.72rem 1rem;
+  color: #e2e8f0;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease;
+}
+
+@utility ghost-button {
+  &:hover {
+    border-color: rgba(103, 232, 249, 0.55);
+    background: rgba(34, 211, 238, 0.1);
+    color: #cffafe;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .glass-panel,
+  .neon-button,
+  .ghost-button {
+    animation: panel-rise 0.45s ease both;
+  }
+}
+
+@keyframes panel-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
