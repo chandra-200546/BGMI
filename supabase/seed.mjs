@@ -1,3 +1,20 @@
+import { existsSync, readFileSync } from "node:fs";
+
+function loadLocalEnv() {
+  for (const file of [".env.local", ".env"]) {
+    if (!existsSync(file)) continue;
+    for (const line of readFileSync(file, "utf8").split(/\r?\n/)) {
+      const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
+      if (!match) continue;
+      const [, name, rawValue] = match;
+      if (process.env[name]) continue;
+      process.env[name] = rawValue.replace(/^"|"$/g, "");
+    }
+  }
+}
+
+loadLocalEnv();
+
 const url = process.env.SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
