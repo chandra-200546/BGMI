@@ -590,100 +590,6 @@
   animation: button-recoil 0.2s ease;
 }
 
-.weapon-stage {
-  position: absolute;
-  right: -4vw;
-  top: -2.6rem;
-  z-index: 0;
-  width: min(42vw, 32rem);
-  height: 11rem;
-  opacity: 0.72;
-  filter: drop-shadow(0 0 28px rgba(255, 107, 0, 0.38));
-  transform-origin: 56% 52%;
-}
-
-.weapon-part {
-  position: absolute;
-  display: block;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.84), rgba(255, 107, 0, 0.92));
-  box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.36),
-    0 0 22px rgba(255, 107, 0, 0.28);
-}
-
-.weapon-stock {
-  left: 0;
-  top: 4.4rem;
-  width: 7.2rem;
-  height: 2.2rem;
-  clip-path: polygon(0 35%, 78% 0, 100% 32%, 82% 100%, 8% 86%);
-}
-
-.weapon-body {
-  left: 6.4rem;
-  top: 3.8rem;
-  width: 12rem;
-  height: 2.9rem;
-  clip-path: polygon(0 12%, 92% 0, 100% 40%, 88% 100%, 12% 92%);
-}
-
-.weapon-barrel {
-  left: 17.4rem;
-  top: 4.5rem;
-  width: 13.5rem;
-  height: 0.9rem;
-  clip-path: polygon(0 0, 100% 18%, 100% 72%, 0 100%);
-}
-
-.weapon-barrel::after {
-  content: "";
-  position: absolute;
-  right: -1.2rem;
-  top: -0.22rem;
-  width: 1.7rem;
-  height: 1.35rem;
-  background: #39ff14;
-  clip-path: polygon(0 20%, 100% 0, 100% 100%, 0 80%);
-  box-shadow: 0 0 20px rgba(57, 255, 20, 0.44);
-}
-
-.weapon-mag {
-  left: 11rem;
-  top: 6.1rem;
-  width: 3rem;
-  height: 4.6rem;
-  clip-path: polygon(18% 0, 100% 8%, 82% 100%, 0 88%);
-}
-
-.weapon-scope {
-  left: 10.6rem;
-  top: 2.1rem;
-  width: 7rem;
-  height: 1.25rem;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #39ff14, #f8fafc, #ff6b00);
-}
-
-.weapon-flare {
-  position: absolute;
-  right: -1.8rem;
-  top: 3.58rem;
-  width: 4.5rem;
-  height: 3.2rem;
-  background: radial-gradient(
-    circle,
-    rgba(255, 255, 255, 0.95),
-    rgba(255, 107, 0, 0.72),
-    transparent 68%
-  );
-  opacity: 0;
-  transform: scale(0.5);
-}
-
-.weapon-loading .weapon-flare {
-  animation: weapon-flare 0.55s ease-in-out infinite;
-}
-
 .magazine-loader {
   display: grid;
   grid-template-columns: repeat(9, minmax(0, 1fr));
@@ -985,34 +891,12 @@
   }
 }
 
-@keyframes weapon-flare {
-  0%,
-  78%,
-  100% {
-    opacity: 0;
-    transform: scale(0.4);
-  }
-  82% {
-    opacity: 0.95;
-    transform: scale(1);
-  }
-}
-
 @keyframes magazine-pulse {
   from {
     opacity: 0.55;
   }
   to {
     opacity: 1;
-  }
-}
-
-@media (max-width: 900px) {
-  .weapon-stage {
-    right: -16vw;
-    top: -3.4rem;
-    width: 28rem;
-    opacity: 0.28;
   }
 }
 
@@ -1024,9 +908,5 @@
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
-  }
-
-  .weapon-stage {
-    display: none;
   }
 }

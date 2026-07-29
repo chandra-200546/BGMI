@@ -541,7 +541,6 @@ function Hero({
           className="max-w-4xl"
         >
           <div className="relative">
-            <WeaponAssembly active={isFetching} />
             <h1
               className="glitch-title relative z-10 font-display text-6xl font-bold uppercase leading-[0.82] tracking-normal text-white sm:text-7xl lg:text-9xl"
               data-text="BGMI WAR ROOM"
@@ -629,43 +628,6 @@ function HudMetric({ label, value }: { label: string; value: string }) {
       <p className="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-slate-500">{label}</p>
       <p className="mt-2 truncate font-display text-2xl font-bold uppercase text-white">{value}</p>
     </div>
-  );
-}
-
-function WeaponAssembly({ active }: { active: boolean }) {
-  const parts = [
-    { className: "weapon-stock", delay: 0.12, x: -90 },
-    { className: "weapon-body", delay: 0.22, x: 0 },
-    { className: "weapon-barrel", delay: 0.34, x: 110 },
-    { className: "weapon-mag", delay: 0.46, y: 80 },
-    { className: "weapon-scope", delay: 0.58, y: -54 },
-  ];
-
-  return (
-    <motion.div
-      data-weapon-reload
-      className={`weapon-stage ${active ? "weapon-loading" : ""}`}
-      animate={{ y: [0, -8, 0], rotate: [-1, 1, -1] }}
-      transition={{ duration: 5.8, repeat: Infinity, ease: "easeInOut" }}
-      aria-hidden="true"
-    >
-      {parts.map((part) => (
-        <motion.span
-          key={part.className}
-          className={`weapon-part ${part.className}`}
-          initial={{ opacity: 0, x: part.x ?? 0, y: part.y ?? 0, scale: 0.9 }}
-          animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
-          transition={{
-            duration: 0.48,
-            delay: part.delay,
-            type: "spring",
-            stiffness: 210,
-            damping: 18,
-          }}
-        />
-      ))}
-      <span className="weapon-flare" />
-    </motion.div>
   );
 }
 
