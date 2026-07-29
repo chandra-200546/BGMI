@@ -2,7 +2,12 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
-import { getPlatformData, submitPublicRegistration } from "./lib/platform-data.server";
+import {
+  getPlatformData,
+  runAdminCommand,
+  submitPublicRegistration,
+  validateAdminKey,
+} from "./lib/platform-data.server";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -112,6 +117,36 @@ async function handlePublicApi(request: Request): Promise<Response | undefined> 
   return jsonResponse({ error: "Public API route not found" }, { status: 404 });
 }
 
+async function handleAdminApi(request: Request): Promise<Response | undefined> {
+  const url = new URL(request.url);
+  if (!url.pathname.startsWith("/api/admin")) return undefined;
+  if (request.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, { status: 405 });
+  }
+
+  try {
+    const payload = await request.json();
+    if (url.pathname === "/api/admin/auth") {
+      if (!validateAdminKey((payload as { adminKey?: unknown }).adminKey)) {
+        return jsonResponse({ error: "Invalid admin key" }, { status: 401 });
+      }
+      return jsonResponse({ data: { ok: true } });
+    }
+
+    if (url.pathname === "/api/admin/command") {
+      const result = await runAdminCommand(payload);
+      return jsonResponse({ data: result }, { status: 201 });
+    }
+
+    return jsonResponse({ error: "Admin API route not found" }, { status: 404 });
+  } catch (error) {
+    return jsonResponse(
+      { error: error instanceof Error ? error.message : "Admin command failed" },
+      { status: 400 },
+    );
+  }
+}
+
 function isH3SwallowedErrorBody(body: string): boolean {
   try {
     const payload = JSON.parse(body) as { unhandled?: unknown; message?: unknown };
@@ -124,6 +159,9 @@ function isH3SwallowedErrorBody(body: string): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const adminResponse = await handleAdminApi(request);
+      if (adminResponse) return adminResponse;
+
       const apiResponse = await handlePublicApi(request);
       if (apiResponse) return apiResponse;
 

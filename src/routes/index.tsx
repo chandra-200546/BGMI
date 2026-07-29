@@ -23,6 +23,7 @@ import {
   Users,
   Volume2,
   VolumeX,
+  X,
   Zap,
 } from "lucide-react";
 import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from "framer-motion";
@@ -87,7 +88,6 @@ const navItems = [
   ["Leaderboard", "#leaderboard"],
   ["Schedule", "#schedule"],
   ["Teams", "#teams"],
-  ["Admin", "#admin"],
 ] as const;
 
 const prizeTiers = [
@@ -410,10 +410,12 @@ function AppNav({
   liveLabel,
   muted,
   toggleSound,
+  onOpenAdmin,
 }: {
   liveLabel: string;
   muted: boolean;
   toggleSound: () => void;
+  onOpenAdmin: () => void;
 }) {
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-orange-400/20 bg-black/55 backdrop-blur-xl">
@@ -445,6 +447,14 @@ function AppNav({
         </nav>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onOpenAdmin}
+            className="inline-flex min-h-10 items-center gap-2 border border-orange-300/40 bg-orange-500/10 px-3 font-mono text-[0.65rem] font-bold uppercase tracking-[0.18em] text-orange-100 transition hover:bg-orange-500/20"
+          >
+            <LockKeyhole className="h-4 w-4" />
+            Admin Panel
+          </button>
           <span className="hidden border border-green-300/30 bg-green-400/10 px-3 py-2 font-mono text-[0.65rem] uppercase tracking-[0.18em] text-green-200 sm:inline-flex">
             Live {liveLabel}
           </span>
@@ -1375,7 +1385,93 @@ function HallOfFame({ teams }: { teams: Team[] }) {
   );
 }
 
-function AdminPanel({ data }: { data: PlatformData }) {
+function AdminPanelModal({
+  data,
+  open,
+  onClose,
+  onChanged,
+}: {
+  data: PlatformData;
+  open: boolean;
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const [adminKey, setAdminKey] = useState("");
+  const [unlocked, setUnlocked] = useState(false);
+  const [activeTask, setActiveTask] = useState<"announcement" | "tournament" | "match">(
+    "announcement",
+  );
+  const [status, setStatus] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({
+    title: "",
+    body: "",
+    category: "Tournament",
+    pinned: true,
+    tournamentId: data.tournaments[0]?.id ?? "",
+    tournamentName: "",
+    mode: "Squad",
+    prizePool: "50000",
+    entryFee: "0",
+    maxTeams: "24",
+    startsAt: "",
+    registrationDeadline: "",
+    maps: "Erangel, Miramar, Sanhok",
+    matchName: "",
+    matchMap: "Erangel",
+    matchGroup: "Group A",
+    matchStartsAt: "",
+  });
+
+  useEffect(() => {
+    if (!form.tournamentId && data.tournaments[0]?.id) {
+      setForm((current) => ({ ...current, tournamentId: data.tournaments[0].id }));
+    }
+  }, [data.tournaments, form.tournamentId]);
+
+  function updateField(key: keyof typeof form, value: string | boolean) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function unlock() {
+    setBusy(true);
+    setStatus("");
+    try {
+      const response = await fetch("/api/admin/auth", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ adminKey }),
+      });
+      if (!response.ok) throw new Error("Wrong admin key");
+      setUnlocked(true);
+      setStatus("Admin command deck unlocked.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Unable to unlock admin panel");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runCommand() {
+    setBusy(true);
+    setStatus("");
+    try {
+      const response = await fetch("/api/admin/command", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ adminKey, action: activeTask, ...form }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "Admin command failed");
+      setStatus(`${activeTask} command completed.`);
+      onChanged();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Admin command failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const pendingSignal = data.tournaments.reduce(
     (sum, tournament) => sum + Math.max(tournament.slots - tournament.registered, 0),
     0,
@@ -1403,42 +1499,273 @@ function AdminPanel({ data }: { data: PlatformData }) {
   ];
 
   return (
-    <Section id="admin" eyebrow="Admin panel" title="Organizer command.">
-      <div className="grid gap-4 lg:grid-cols-3">
-        {adminCards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <motion.article
-              key={card.label}
-              data-gsap-reveal
-              whileHover={{ y: -6 }}
-              className="clip-panel hud-panel p-6"
+    <AnimatePresence>
+      {open ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[95] overflow-y-auto bg-black/82 px-4 py-8 backdrop-blur-xl"
+        >
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-4 flex justify-end">
+              <button
+                type="button"
+                onClick={onClose}
+                className="grid h-11 w-11 place-items-center border border-white/15 bg-white/5 text-white hover:border-orange-300/50"
+                aria-label="Close admin panel"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <motion.div
+              initial={{ y: 34, opacity: 0, rotateX: 6 }}
+              animate={{ y: 0, opacity: 1, rotateX: 0 }}
+              className="clip-panel hud-panel p-5 md:p-7"
             >
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col gap-4 border-b border-white/10 pb-5 md:flex-row md:items-start md:justify-between">
                 <div>
-                  <p className="font-mono text-xs uppercase tracking-[0.22em] text-green-300">
-                    {card.label}
+                  <p className="font-mono text-xs uppercase tracking-[0.24em] text-orange-300">
+                    Admin panel
                   </p>
-                  <h3 className="mt-3 font-display text-5xl font-bold uppercase text-white">
-                    {card.value}
-                  </h3>
+                  <h2 className="mt-2 font-display text-5xl font-bold uppercase leading-none text-white md:text-7xl">
+                    Organizer command
+                  </h2>
                 </div>
-                <span className="grid h-12 w-12 place-items-center border border-orange-300/40 bg-orange-500/10 text-orange-200">
-                  <Icon className="h-5 w-5" />
-                </span>
-              </div>
-              <p className="mt-6 min-h-12 text-sm leading-6 text-slate-300">{card.note}</p>
-              <div className="mt-6 border border-white/10 bg-black/45 p-3">
-                <div className="flex items-center justify-between font-mono text-[0.65rem] uppercase tracking-[0.18em] text-slate-400">
-                  <span>Access</span>
-                  <span className="text-orange-200">Protected workflow</span>
+                <div className="border border-green-300/25 bg-green-400/10 px-4 py-3 font-mono text-xs uppercase tracking-[0.18em] text-green-100">
+                  {unlocked ? "Credentials accepted" : "Credentials required"}
                 </div>
               </div>
-            </motion.article>
-          );
-        })}
+
+              {!unlocked ? (
+                <div className="mt-6 grid gap-4 md:grid-cols-[1fr_auto]">
+                  <label className="field-shell">
+                    Admin key
+                    <input
+                      type="password"
+                      value={adminKey}
+                      onChange={(event) => setAdminKey(event.target.value)}
+                      placeholder="Enter admin password"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={unlock}
+                    disabled={busy}
+                    className="self-end border border-orange-300/50 bg-orange-500/15 px-6 py-4 font-mono text-xs font-bold uppercase tracking-[0.2em] text-orange-100 disabled:opacity-50"
+                  >
+                    {busy ? "Checking" : "Unlock"}
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-6 grid gap-6 xl:grid-cols-[0.75fr_1.25fr]">
+                  <div className="grid gap-3">
+                    {adminCards.map((card) => {
+                      const Icon = card.icon;
+                      return (
+                        <div key={card.label} className="border border-white/10 bg-black/45 p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-green-300">
+                                {card.label}
+                              </p>
+                              <p className="mt-1 font-display text-4xl font-bold uppercase text-white">
+                                {card.value}
+                              </p>
+                            </div>
+                            <Icon className="h-5 w-5 text-orange-300" />
+                          </div>
+                          <p className="mt-2 text-sm leading-6 text-slate-400">{card.note}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div>
+                    <div className="mb-4 flex flex-wrap gap-2">
+                      {(["announcement", "tournament", "match"] as const).map((task) => (
+                        <button
+                          key={task}
+                          type="button"
+                          onClick={() => setActiveTask(task)}
+                          className={`border px-4 py-3 font-mono text-[0.68rem] font-bold uppercase tracking-[0.18em] ${
+                            activeTask === task
+                              ? "border-orange-300/60 bg-orange-500/15 text-orange-100"
+                              : "border-white/10 bg-white/[0.03] text-slate-400"
+                          }`}
+                        >
+                          {task}
+                        </button>
+                      ))}
+                    </div>
+
+                    <AdminTaskFields
+                      activeTask={activeTask}
+                      form={form}
+                      tournaments={data.tournaments}
+                      updateField={updateField}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={runCommand}
+                      disabled={busy}
+                      className="mt-5 w-full border border-green-300/40 bg-green-400/10 px-6 py-4 font-mono text-xs font-bold uppercase tracking-[0.2em] text-green-100 disabled:opacity-50"
+                    >
+                      {busy ? "Executing" : "Execute admin command"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {status ? (
+                <p className="mt-5 border border-white/10 bg-black/45 p-3 font-mono text-xs uppercase tracking-[0.16em] text-orange-100">
+                  {status}
+                </p>
+              ) : null}
+            </motion.div>
+          </div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  );
+}
+
+function AdminTaskFields({
+  activeTask,
+  form,
+  tournaments,
+  updateField,
+}: {
+  activeTask: "announcement" | "tournament" | "match";
+  form: Record<string, string | boolean>;
+  tournaments: Tournament[];
+  updateField: (key: keyof typeof form, value: string | boolean) => void;
+}) {
+  if (activeTask === "announcement") {
+    return (
+      <div className="grid gap-4">
+        <Field
+          label="Announcement title"
+          value={String(form.title)}
+          onChange={(value) => updateField("title", value)}
+        />
+        <Field
+          label="Announcement body"
+          value={String(form.body)}
+          onChange={(value) => updateField("body", value)}
+        />
+        <Field
+          label="Category"
+          value={String(form.category)}
+          onChange={(value) => updateField("category", value)}
+        />
+        <label className="field-shell">
+          Tournament target
+          <select
+            value={String(form.tournamentId)}
+            onChange={(event) => updateField("tournamentId", event.target.value)}
+          >
+            <option value="">Global announcement</option>
+            {tournaments.map((tournament) => (
+              <option key={tournament.id} value={tournament.id}>
+                {tournament.name}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
-    </Section>
+    );
+  }
+
+  if (activeTask === "tournament") {
+    return (
+      <div className="grid gap-4 md:grid-cols-2">
+        <Field
+          label="Tournament name"
+          value={String(form.tournamentName)}
+          onChange={(value) => updateField("tournamentName", value)}
+        />
+        <Field
+          label="Mode"
+          value={String(form.mode)}
+          onChange={(value) => updateField("mode", value)}
+        />
+        <Field
+          label="Prize pool"
+          value={String(form.prizePool)}
+          onChange={(value) => updateField("prizePool", value)}
+        />
+        <Field
+          label="Entry fee"
+          value={String(form.entryFee)}
+          onChange={(value) => updateField("entryFee", value)}
+        />
+        <Field
+          label="Max teams"
+          value={String(form.maxTeams)}
+          onChange={(value) => updateField("maxTeams", value)}
+        />
+        <Field
+          label="Map pool"
+          value={String(form.maps)}
+          onChange={(value) => updateField("maps", value)}
+        />
+        <Field
+          label="Starts at"
+          type="datetime-local"
+          value={String(form.startsAt)}
+          onChange={(value) => updateField("startsAt", value)}
+        />
+        <Field
+          label="Registration deadline"
+          type="datetime-local"
+          value={String(form.registrationDeadline)}
+          onChange={(value) => updateField("registrationDeadline", value)}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      <label className="field-shell">
+        Tournament
+        <select
+          value={String(form.tournamentId)}
+          onChange={(event) => updateField("tournamentId", event.target.value)}
+        >
+          <option value="">Select tournament</option>
+          {tournaments.map((tournament) => (
+            <option key={tournament.id} value={tournament.id}>
+              {tournament.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <Field
+        label="Match name"
+        value={String(form.matchName)}
+        onChange={(value) => updateField("matchName", value)}
+      />
+      <Field
+        label="Map"
+        value={String(form.matchMap)}
+        onChange={(value) => updateField("matchMap", value)}
+      />
+      <Field
+        label="Group"
+        value={String(form.matchGroup)}
+        onChange={(value) => updateField("matchGroup", value)}
+      />
+      <Field
+        label="Match starts at"
+        type="datetime-local"
+        value={String(form.matchStartsAt)}
+        onChange={(value) => updateField("matchStartsAt", value)}
+      />
+    </div>
   );
 }
 
@@ -1476,7 +1803,8 @@ function Footer() {
 function BgmiTournamentApp() {
   const sound = useSoundDesign();
   useGsapSequences(sound.play);
-  const { data = emptyPlatformData, isFetching } = usePlatformData();
+  const [adminOpen, setAdminOpen] = useState(false);
+  const { data = emptyPlatformData, isFetching, refetch } = usePlatformData();
   const liveLabel = formatUpdatedAt(data.generatedAt);
 
   return (
@@ -1488,7 +1816,12 @@ function BgmiTournamentApp() {
         transition={{ duration: 0.75, ease: [0.76, 0, 0.24, 1] }}
         className="fixed inset-0 z-[100] bg-orange-500"
       />
-      <AppNav liveLabel={liveLabel} muted={sound.muted} toggleSound={sound.toggle} />
+      <AppNav
+        liveLabel={liveLabel}
+        muted={sound.muted}
+        toggleSound={sound.toggle}
+        onOpenAdmin={() => setAdminOpen(true)}
+      />
       <main>
         <Hero data={data} isFetching={isFetching} playSound={sound.play} />
         <TournamentInfo data={data} />
@@ -1496,8 +1829,13 @@ function BgmiTournamentApp() {
         <Leaderboard data={data} />
         <Schedule schedules={data.schedules} />
         <HallOfFame teams={data.teams} />
-        <AdminPanel data={data} />
       </main>
+      <AdminPanelModal
+        data={data}
+        open={adminOpen}
+        onClose={() => setAdminOpen(false)}
+        onChanged={() => void refetch()}
+      />
       <Footer />
     </div>
   );

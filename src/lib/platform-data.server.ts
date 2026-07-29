@@ -87,6 +87,28 @@ export type PublicRegistrationSubmission = {
   paymentFileName?: string;
 };
 
+export type AdminCommandPayload = {
+  adminKey?: string;
+  action?: "announcement" | "tournament" | "match";
+  title?: string;
+  body?: string;
+  category?: string;
+  pinned?: boolean;
+  tournamentId?: string;
+  tournamentName?: string;
+  mode?: string;
+  prizePool?: string | number;
+  entryFee?: string | number;
+  maxTeams?: string | number;
+  startsAt?: string;
+  registrationDeadline?: string;
+  maps?: string;
+  matchName?: string;
+  matchMap?: string;
+  matchGroup?: string;
+  matchStartsAt?: string;
+};
+
 function formatCurrency(value: number) {
   if (value === 0) return "Free";
   return new Intl.NumberFormat("en-IN", {
@@ -172,6 +194,11 @@ function supabaseHeaders() {
   };
 }
 
+export function validateAdminKey(value: unknown) {
+  const configured = process.env.admin_key ?? process.env.ADMIN_KEY;
+  return Boolean(configured && typeof value === "string" && value === configured);
+}
+
 function normalizeSubmission(payload: unknown): PublicRegistrationSubmission {
   const value = payload as Partial<PublicRegistrationSubmission>;
   const players = Array.isArray(value.players)
@@ -239,6 +266,97 @@ export async function submitPublicRegistration(payload: unknown) {
   }
 
   return { id, status: "SUBMITTED" };
+}
+
+function numberValue(value: unknown, fallback = 0) {
+  const parsed = Number(String(value ?? "").replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function isoValue(value: unknown, fallbackDays: number) {
+  const parsed = new Date(String(value ?? ""));
+  if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+  return new Date(Date.now() + fallbackDays * 86_400_000).toISOString();
+}
+
+async function supabaseInsert(table: string, body: Record<string, unknown>) {
+  const supabase = supabaseHeaders();
+  if (!supabase) throw new Error("Supabase is not configured for admin writes");
+
+  const response = await fetch(`${supabase.url}/rest/v1/${table}`, {
+    method: "POST",
+    headers: { ...supabase.headers, prefer: "return=representation" },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Supabase ${table} insert failed: ${response.status} ${detail}`);
+  }
+
+  return (await response.json()) as unknown;
+}
+
+export async function runAdminCommand(payload: unknown) {
+  const command = payload as AdminCommandPayload;
+  if (!validateAdminKey(command.adminKey)) throw new Error("Invalid admin key");
+
+  if (command.action === "announcement") {
+    if (!command.title?.trim()) throw new Error("Announcement title is required");
+    const id = globalThis.crypto?.randomUUID?.() ?? `ann_${Date.now()}`;
+    await supabaseInsert("announcements", {
+      id,
+      tournament_id: command.tournamentId || null,
+      category: command.category?.trim() || "Admin",
+      title: command.title.trim(),
+      body: command.body?.trim() || command.title.trim(),
+      pinned: Boolean(command.pinned),
+      publish_at: new Date().toISOString(),
+    });
+    return { id, action: command.action, status: "published" };
+  }
+
+  if (command.action === "tournament") {
+    if (!command.tournamentName?.trim()) throw new Error("Tournament name is required");
+    const id = globalThis.crypto?.randomUUID?.() ?? `tour_${Date.now()}`;
+    await supabaseInsert("tournaments", {
+      id,
+      name: command.tournamentName.trim(),
+      mode: command.mode?.trim() || "Squad",
+      status: "REGISTRATION_OPEN",
+      prize_pool: numberValue(command.prizePool),
+      entry_fee: numberValue(command.entryFee),
+      max_teams: numberValue(command.maxTeams, 24),
+      registered_teams: 0,
+      starts_at: isoValue(command.startsAt, 7),
+      registration_deadline: isoValue(command.registrationDeadline, 5),
+      maps: String(command.maps || "Erangel, Miramar, Sanhok")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean),
+      phase: "Registration",
+      accent: "from-orange-400 to-green-300",
+    });
+    return { id, action: command.action, status: "created" };
+  }
+
+  if (command.action === "match") {
+    if (!command.matchName?.trim()) throw new Error("Match name is required");
+    if (!command.tournamentId?.trim()) throw new Error("Tournament is required");
+    const id = globalThis.crypto?.randomUUID?.() ?? `match_${Date.now()}`;
+    await supabaseInsert("matches", {
+      id,
+      tournament_id: command.tournamentId.trim(),
+      name: command.matchName.trim(),
+      starts_at: isoValue(command.matchStartsAt, 2),
+      map: command.matchMap?.trim() || "Erangel",
+      status: "UPCOMING",
+      group_name: command.matchGroup?.trim() || "Group A",
+    });
+    return { id, action: command.action, status: "scheduled" };
+  }
+
+  throw new Error("Unsupported admin command");
 }
 
 async function getSupabasePlatformData(): Promise<PlatformData | undefined> {
