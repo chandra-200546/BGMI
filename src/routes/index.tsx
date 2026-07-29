@@ -89,6 +89,7 @@ type AdminSnapshot = {
   matches: Array<Record<string, unknown>>;
   announcements: Array<Record<string, unknown>>;
   generatedAt: string;
+  warnings?: string[];
 };
 
 type AdminDataTab = "registrations" | "teams" | "tournaments" | "matches" | "announcements";
@@ -2005,6 +2006,13 @@ function AdminDatabaseBrowser({
       <p className="mt-3 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-slate-500">
         Snapshot: {snapshot ? formatUpdatedAt(snapshot.generatedAt) : "not loaded"}
       </p>
+      {snapshot?.warnings?.length ? (
+        <div className="mt-3 border border-orange-300/30 bg-orange-500/10 p-3 text-sm text-orange-100">
+          {snapshot.warnings.map((warning) => (
+            <p key={warning}>{warning}</p>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

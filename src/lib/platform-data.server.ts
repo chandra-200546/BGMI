@@ -222,6 +222,19 @@ async function supabaseAdminGet<T>(path: string): Promise<T[]> {
   throw lastError ?? new Error(`Supabase admin REST request failed for ${path}`);
 }
 
+async function optionalSupabaseAdminGet<T>(
+  path: string,
+  warning: string,
+): Promise<{ rows: T[]; warning?: string }> {
+  try {
+    return { rows: await supabaseAdminGet<T>(path) };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes(": 404")) return { rows: [], warning };
+    throw error;
+  }
+}
+
 function supabaseHeaders() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY;
   if (!process.env.SUPABASE_URL || !key) return undefined;
@@ -383,15 +396,17 @@ export async function getAdminSnapshot(payload: unknown) {
   const command = payload as AdminCommandPayload;
   if (!validateAdminKey(command.adminKey)) throw new Error("Invalid admin key");
 
-  const [tournaments, teams, registrations, matches, announcements] = await Promise.all([
+  const [tournaments, teams, registrationResult, matches, announcements] = await Promise.all([
     supabaseAdminGet<SupabaseTournament>("tournaments?select=*&order=starts_at.desc"),
     supabaseAdminGet<SupabaseTeam>("teams?select=*&order=created_at.desc"),
-    supabaseAdminGet<SupabaseRegistrationSubmission>(
+    optionalSupabaseAdminGet<SupabaseRegistrationSubmission>(
       "registration_submissions?select=*&order=created_at.desc",
+      "Registration submissions table is not created yet. Run supabase/schema.sql in the Supabase SQL editor to enable full registration management.",
     ),
     supabaseAdminGet<SupabaseMatch>("matches?select=*&order=starts_at.desc"),
     supabaseAdminGet<SupabaseAnnouncement>("announcements?select=*&order=publish_at.desc"),
   ]);
+  const warnings = [registrationResult.warning].filter(Boolean) as string[];
 
   return {
     tournaments,
@@ -401,13 +416,14 @@ export async function getAdminSnapshot(payload: unknown) {
       total_points: team.placement_points + team.finishes - team.penalty_points,
       recent_form: parseList(team.recent_form),
     })),
-    registrations: registrations.map((registration) => ({
+    registrations: registrationResult.rows.map((registration) => ({
       ...registration,
       players: parseList(registration.players),
     })),
     matches,
     announcements,
     generatedAt: new Date().toISOString(),
+    warnings,
   };
 }
 
