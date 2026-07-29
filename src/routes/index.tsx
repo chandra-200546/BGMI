@@ -503,11 +503,30 @@ function Hero({
   return (
     <section id="hero" className="relative min-h-screen overflow-hidden px-4 pt-28 lg:px-6">
       <div className="absolute inset-0">
-        <img
-          src="/assets/battle-arena-hero.png"
-          alt=""
-          className="h-full w-full object-cover opacity-45"
-        />
+        <video
+          className="hidden h-full w-full object-cover opacity-55 md:block"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          poster="/assets/battle-arena-hero.png"
+          aria-hidden="true"
+        >
+          <source src="/assets/hero-parachute-desktop.mp4" type="video/mp4" />
+        </video>
+        <video
+          className="block h-full w-full object-cover opacity-55 md:hidden"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          poster="/assets/battle-arena-hero.png"
+          aria-hidden="true"
+        >
+          <source src="/assets/hero-parachute-mobile.mp4" type="video/mp4" />
+        </video>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(255,107,0,0.28),transparent_32rem),linear-gradient(90deg,rgba(5,5,8,0.98),rgba(5,5,8,0.7)_42%,rgba(5,5,8,0.96))]" />
       </div>
       <div className="battle-grid absolute inset-0 opacity-25" />
