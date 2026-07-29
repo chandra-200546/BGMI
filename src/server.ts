@@ -2,7 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
-import { getPlatformData } from "./lib/platform-data.server";
+import { getPlatformData, submitPublicRegistration } from "./lib/platform-data.server";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -50,6 +50,22 @@ function jsonResponse(payload: unknown, init?: ResponseInit) {
 async function handlePublicApi(request: Request): Promise<Response | undefined> {
   const url = new URL(request.url);
   if (!url.pathname.startsWith("/api/public")) return undefined;
+
+  if (url.pathname === "/api/public/register") {
+    if (request.method !== "POST") {
+      return jsonResponse({ error: "Method not allowed" }, { status: 405 });
+    }
+
+    try {
+      const result = await submitPublicRegistration(await request.json());
+      return jsonResponse({ data: result }, { status: 201 });
+    } catch (error) {
+      return jsonResponse(
+        { error: error instanceof Error ? error.message : "Registration submission failed" },
+        { status: 400 },
+      );
+    }
+  }
 
   const data = await getPlatformData();
 

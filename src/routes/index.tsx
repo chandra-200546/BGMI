@@ -1,81 +1,55 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
-  Activity,
-  Bell,
+  ArrowDown,
+  ArrowUp,
   CalendarDays,
   CheckCircle2,
   ChevronRight,
-  ClipboardCheck,
+  Crosshair,
   Crown,
-  Database,
-  Download,
-  FileText,
-  Filter,
+  Disc3,
   Gamepad2,
-  Gauge,
-  Image,
-  Lock,
-  MapPinned,
-  Menu,
+  Headphones,
+  ImagePlus,
   MessageCircle,
-  QrCode,
   Search,
   Shield,
+  Skull,
   Swords,
   Trophy,
   Upload,
   Users,
-  Video,
-  X,
+  Volume2,
+  VolumeX,
   Zap,
 } from "lucide-react";
-import {
-  useMemo,
-  useState,
-  type ComponentType,
-  type CSSProperties,
-  type ReactNode,
-  type SVGProps,
-} from "react";
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Line,
-  LineChart,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 
 import {
   emptyPlatformData,
   totalPoints,
   type PlatformData,
+  type ScheduleItem,
   type Team,
+  type Tournament,
 } from "../lib/platform-types";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "NexBattles BGMI - Live Esports Tournament Platform" },
+      { title: "NexBattles BGMI - Hardcore Esports Registration" },
       {
         name: "description",
         content:
-          "Live BGMI esports tournament management with real-time leaderboards, schedules, registration, dashboards, and admin operations.",
+          "Real-time BGMI tournament registration with live leaderboards, match schedule, team hall of fame, and cinematic gaming animations.",
       },
-      { property: "og:title", content: "NexBattles BGMI - Live Tournament Command Center" },
+      { property: "og:title", content: "NexBattles BGMI - Register Your Squad" },
       {
         property: "og:description",
         content:
-          "A futuristic esports command center powered by real-time tournament data and live refresh.",
+          "A hardcore battle-royale tournament platform powered by live Supabase tournament data.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -84,9 +58,42 @@ export const Route = createFileRoute("/")({
   component: BgmiTournamentApp,
 });
 
-type Icon = ComponentType<SVGProps<SVGSVGElement>>;
+type RegistrationPayload = {
+  tournamentId: string;
+  teamName: string;
+  logoFileName: string;
+  captainName: string;
+  captainEmail: string;
+  bgmiUid: string;
+  players: string[];
+  whatsapp: string;
+  discord: string;
+  paymentFileName: string;
+};
 
-const placementPoints: Record<number, number> = { 1: 10, 2: 6, 3: 5, 4: 4, 5: 3, 6: 2, 7: 1, 8: 1 };
+const navItems = [
+  ["Arena", "#hero"],
+  ["Prizes", "#prizes"],
+  ["Register", "#register"],
+  ["Leaderboard", "#leaderboard"],
+  ["Schedule", "#schedule"],
+  ["Teams", "#teams"],
+] as const;
+
+const prizeTiers = [
+  { label: "Champion Squad", split: "55%", badge: "WWCD", icon: Crown },
+  { label: "Runner Up", split: "30%", badge: "Frag pressure", icon: Swords },
+  { label: "MVP Bonus", split: "15%", badge: "Top finisher", icon: Skull },
+];
+
+const registrationSteps = ["Squad", "Captain", "Roster", "Comms", "Proof"];
+
+const hallFallback = [
+  { name: "Hydra Blitz", region: "North", stat: "4 WWCD", drop: "Georgopol" },
+  { name: "Soul Ember", region: "West", stat: "78 Finishes", drop: "Pochinki" },
+  { name: "Revenant X", region: "South", stat: "212 Points", drop: "School" },
+  { name: "GodLike Ops", region: "East", stat: "99% Check-in", drop: "Military Base" },
+];
 
 async function fetchPlatformData(): Promise<PlatformData> {
   const response = await fetch("/api/public/live", { cache: "no-store" });
@@ -105,1018 +112,314 @@ function usePlatformData() {
   });
 }
 
-function Card({
+function formatUpdatedAt(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "syncing";
+  return date.toLocaleTimeString("en-IN", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+function parseDisplayDate(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+function useCountdown(target?: Date) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  if (!target) return undefined;
+
+  const diff = Math.max(0, target.getTime() - now);
+  const days = Math.floor(diff / 86_400_000);
+  const hours = Math.floor((diff % 86_400_000) / 3_600_000);
+  const minutes = Math.floor((diff % 3_600_000) / 60_000);
+  const seconds = Math.floor((diff % 60_000) / 1000);
+  return { days, hours, minutes, seconds };
+}
+
+function useGsapSequences() {
+  useEffect(() => {
+    let ctx: { revert: () => void } | undefined;
+    let cancelled = false;
+
+    void Promise.all([import("gsap"), import("gsap/ScrollTrigger")]).then(
+      ([gsapModule, scrollTriggerModule]) => {
+        if (cancelled || typeof window === "undefined") return;
+        const gsap = gsapModule.gsap;
+        const ScrollTrigger = scrollTriggerModule.ScrollTrigger;
+        gsap.registerPlugin(ScrollTrigger);
+
+        ctx = gsap.context(() => {
+          gsap.to(".battle-grid", {
+            backgroundPosition: "160px 320px",
+            ease: "none",
+            scrollTrigger: {
+              trigger: document.body,
+              start: "top top",
+              end: "bottom bottom",
+              scrub: 1,
+            },
+          });
+
+          gsap.utils.toArray<HTMLElement>("[data-gsap-reveal]").forEach((element) => {
+            gsap.fromTo(
+              element,
+              { y: 46, opacity: 0, rotateX: 8 },
+              {
+                y: 0,
+                opacity: 1,
+                rotateX: 0,
+                duration: 0.8,
+                ease: "power3.out",
+                scrollTrigger: { trigger: element, start: "top 82%" },
+              },
+            );
+          });
+        });
+      },
+    );
+
+    return () => {
+      cancelled = true;
+      ctx?.revert();
+    };
+  }, []);
+}
+
+function MagneticButton({
   children,
+  href,
   className = "",
-  id,
+  onClick,
 }: {
   children: ReactNode;
+  href?: string;
   className?: string;
-  id?: string;
+  onClick?: () => void;
 }) {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const springX = useSpring(x, { stiffness: 240, damping: 18 });
+  const springY = useSpring(y, { stiffness: 240, damping: 18 });
+
+  function onMove(event: React.MouseEvent<HTMLElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    x.set((event.clientX - rect.left - rect.width / 2) * 0.22);
+    y.set((event.clientY - rect.top - rect.height / 2) * 0.22);
+  }
+
+  const props = {
+    onMouseMove: onMove,
+    onMouseLeave: () => {
+      x.set(0);
+      y.set(0);
+    },
+    style: { x: springX, y: springY },
+    className: `magnetic-button ${className}`,
+  };
+
+  if (href) {
+    return (
+      <motion.a href={href} {...props}>
+        {children}
+      </motion.a>
+    );
+  }
+
   return (
-    <div id={id} className={`glass-panel ${className}`}>
+    <motion.button type="button" onClick={onClick} {...props}>
       {children}
-    </div>
+    </motion.button>
   );
 }
 
-function Stat({ label, value, icon: IconComponent }: { label: string; value: string; icon: Icon }) {
-  return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">{label}</p>
-          <p className="mt-2 text-2xl font-black text-white">{value}</p>
-        </div>
-        <span className="grid h-11 w-11 place-items-center rounded-md border border-cyan-300/30 bg-cyan-300/10 text-cyan-200">
-          <IconComponent className="h-5 w-5" />
-        </span>
-      </div>
-    </Card>
-  );
-}
+function CursorCrosshair() {
+  const [position, setPosition] = useState({ x: -100, y: -100 });
 
-function StatusBadge({ status }: { status: string }) {
-  const color =
-    status === "Live"
-      ? "border-red-400/50 bg-red-500/15 text-red-200"
-      : status === "Registration Open"
-        ? "border-emerald-400/50 bg-emerald-400/15 text-emerald-200"
-        : status === "Closing Soon"
-          ? "border-amber-300/50 bg-amber-300/15 text-amber-100"
-          : "border-slate-400/40 bg-slate-400/10 text-slate-200";
-  return (
-    <span
-      className={`rounded-sm border px-2 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] ${color}`}
-    >
-      {status}
-    </span>
-  );
-}
+  useEffect(() => {
+    const update = (event: PointerEvent) => setPosition({ x: event.clientX, y: event.clientY });
+    window.addEventListener("pointermove", update);
+    return () => window.removeEventListener("pointermove", update);
+  }, []);
 
-function LiveDataBanner({ data, isFetching }: { data: PlatformData; isFetching: boolean }) {
-  const live = data.source === "database" || data.source === "supabase";
-  const label = live ? "Live operations feed online" : "Live operations feed syncing";
   return (
     <div
-      className={`rounded-md border px-4 py-3 text-sm ${
-        live
-          ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-100"
-          : "border-amber-300/40 bg-amber-300/10 text-amber-100"
-      }`}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="flex items-center gap-2 font-bold">
-          <span className={`h-2 w-2 rounded-full ${live ? "bg-emerald-300" : "bg-amber-300"}`} />
-          {label}
-        </span>
-        <span className="font-mono text-xs uppercase tracking-[0.16em] opacity-80">
-          {isFetching ? "Syncing..." : `Updated ${new Date(data.generatedAt).toLocaleTimeString()}`}
-        </span>
-      </div>
-      {!live ? (
-        <p className="mt-2 text-xs opacity-90">
-          Tournament control is warming up. Published events and standings appear here
-          automatically.
-        </p>
-      ) : null}
-    </div>
+      className="cursor-crosshair pointer-events-none fixed z-[80] hidden h-8 w-8 -translate-x-1/2 -translate-y-1/2 md:block"
+      style={{ left: position.x, top: position.y }}
+    />
   );
 }
 
-function EmptyState({ title, body }: { title: string; body: string }) {
-  return (
-    <Card className="p-8 text-center">
-      <Activity className="mx-auto h-10 w-10 text-cyan-200" />
-      <h3 className="mt-4 text-xl font-black uppercase text-white">{title}</h3>
-      <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-400">{body}</p>
-    </Card>
-  );
-}
+function AppNav({ liveLabel }: { liveLabel: string }) {
+  const [muted, setMuted] = useState(true);
 
-function AppNav() {
-  const [open, setOpen] = useState(false);
-  const links = [
-    "Tournaments",
-    "Register",
-    "Leaderboard",
-    "Schedule",
-    "Teams",
-    "Rules",
-    "Gallery",
-    "Admin",
-  ];
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#070912]/85 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 lg:px-6">
-        <a href="#home" className="flex items-center gap-3">
-          <span className="relative grid h-11 w-11 place-items-center overflow-hidden rounded-md border border-cyan-300/40 bg-cyan-300/10 text-cyan-100 shadow-[0_0_28px_rgba(34,211,238,0.22)]">
-            <Swords className="h-5 w-5" />
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-orange-400/20 bg-black/55 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 lg:px-6">
+        <a href="#hero" className="flex items-center gap-3">
+          <span className="grid h-10 w-10 place-items-center border border-orange-400/60 bg-orange-500/10 text-orange-300 shadow-[0_0_28px_rgba(255,107,0,0.3)]">
+            <Crosshair className="h-5 w-5" />
           </span>
-          <div>
-            <p className="text-lg font-black uppercase leading-none tracking-[0.12em] text-white">
+          <span>
+            <span className="block font-display text-2xl font-bold uppercase leading-none tracking-[0.12em] text-white">
               NexBattles
-            </p>
-            <p className="text-[0.62rem] font-bold uppercase tracking-[0.25em] text-cyan-300">
-              BGMI Command
-            </p>
-          </div>
+            </span>
+            <span className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-green-300">
+              BGMI live ops
+            </span>
+          </span>
         </a>
-        <nav className="ml-auto hidden items-center gap-5 lg:flex">
-          {links.map((link) => (
+
+        <nav className="hidden items-center gap-6 lg:flex">
+          {navItems.map(([label, href]) => (
             <a
-              key={link}
-              href={`#${link.toLowerCase()}`}
-              className="text-xs font-bold uppercase tracking-[0.16em] text-slate-300 hover:text-cyan-200"
+              key={label}
+              href={href}
+              className="font-mono text-xs uppercase tracking-[0.18em] text-slate-300 transition hover:text-orange-300"
             >
-              {link}
+              {label}
             </a>
           ))}
         </nav>
-        <button className="relative grid h-10 w-10 place-items-center rounded-md border border-white/10 bg-white/5 text-slate-100">
-          <Bell className="h-4 w-4" />
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-400" />
-        </button>
-        <a
-          href="#register"
-          className="hidden rounded-md bg-cyan-300 px-4 py-2 text-sm font-black uppercase tracking-[0.12em] text-[#061019] shadow-[0_0_28px_rgba(34,211,238,0.28)] sm:inline-flex"
-        >
-          Register
-        </a>
-        <button
-          onClick={() => setOpen((value) => !value)}
-          className="grid h-10 w-10 place-items-center rounded-md border border-white/10 bg-white/5 text-white lg:hidden"
-        >
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
-      </div>
-      {open ? (
-        <div className="border-t border-white/10 bg-[#070912] px-4 py-4 lg:hidden">
-          <div className="grid gap-2">
-            {links.map((link) => (
-              <a
-                key={link}
-                href={`#${link.toLowerCase()}`}
-                onClick={() => setOpen(false)}
-                className="rounded-md border border-white/10 bg-white/5 px-3 py-3 text-sm font-bold uppercase tracking-[0.14em] text-slate-200"
-              >
-                {link}
-              </a>
-            ))}
-          </div>
+
+        <div className="flex items-center gap-2">
+          <span className="hidden border border-green-300/30 bg-green-400/10 px-3 py-2 font-mono text-[0.65rem] uppercase tracking-[0.18em] text-green-200 sm:inline-flex">
+            Live {liveLabel}
+          </span>
+          <button
+            type="button"
+            aria-label="Toggle interface sound"
+            onClick={() => setMuted((value) => !value)}
+            className="grid h-10 w-10 place-items-center border border-white/15 bg-white/5 text-slate-200 transition hover:border-orange-300/60 hover:text-orange-200"
+          >
+            {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </button>
         </div>
-      ) : null}
+      </div>
     </header>
   );
 }
 
-function GamingAnimationLayer() {
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="scanline" />
-      <div className="reticle reticle-a" />
-      <div className="reticle reticle-b" />
-      <div className="drop-marker drop-a">DROP</div>
-      <div className="drop-marker drop-b">ZONE</div>
-      <div className="tracer tracer-a" />
-      <div className="tracer tracer-b" />
-      <div className="tracer tracer-c" />
-      <div className="hud-sweep" />
-      <div className="particle-field">
-        {Array.from({ length: 18 }).map((_, index) => (
-          <span key={index} style={{ "--i": index } as CSSProperties} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function Hero({ data, isFetching }: { data: PlatformData; isFetching: boolean }) {
-  const topTeams = data.teams.slice(0, 5);
-  const totalPrize = data.tournaments.length > 0 ? data.tournaments[0].prize : "Syncing";
-  const registered = data.tournaments.reduce((sum, item) => sum + item.registered, 0);
-  const slots = data.tournaments.reduce((sum, item) => sum + item.slots, 0);
+  const activeTournament = data.tournaments[0];
+  const deadline = parseDisplayDate(activeTournament?.deadline ?? "");
+  const countdown = useCountdown(deadline);
+  const registered = data.tournaments.reduce((sum, tournament) => sum + tournament.registered, 0);
+  const slots = data.tournaments.reduce((sum, tournament) => sum + tournament.slots, 0);
 
   return (
-    <section id="home" className="relative overflow-hidden">
-      <div className="absolute inset-0 bg-[url('/assets/battle-arena-hero.png')] bg-cover bg-center opacity-70" />
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,#05060c_0%,rgba(5,6,12,.88)_36%,rgba(5,6,12,.42)_100%)]" />
-      <div className="grid-overlay absolute inset-0 opacity-35" />
-      <GamingAnimationLayer />
-      <div className="mx-auto grid min-h-[calc(100vh-72px)] max-w-7xl items-center gap-10 px-4 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:px-6">
-        <div className="relative z-10">
-          <LiveDataBanner data={data} isFetching={isFetching} />
-          <div className="mt-6 inline-flex items-center gap-2 rounded-md border border-cyan-300/30 bg-cyan-300/10 px-3 py-2 text-xs font-bold uppercase tracking-[0.18em] text-cyan-200">
-            <Activity className="h-4 w-4" /> Real-time tournament feed
-          </div>
-          <h1 className="mt-6 max-w-4xl text-5xl font-black uppercase leading-[0.95] tracking-normal text-white md:text-7xl xl:text-8xl">
-            <span className="glitch-title" data-text="Live BGMI esports command center.">
-              Live BGMI esports command center.
-            </span>
+    <section id="hero" className="relative min-h-screen overflow-hidden px-4 pt-28 lg:px-6">
+      <div className="absolute inset-0">
+        <img
+          src="/assets/battle-arena-hero.png"
+          alt=""
+          className="h-full w-full object-cover opacity-45"
+        />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(255,107,0,0.28),transparent_32rem),linear-gradient(90deg,rgba(5,5,8,0.98),rgba(5,5,8,0.7)_42%,rgba(5,5,8,0.96))]" />
+      </div>
+      <div className="battle-grid absolute inset-0 opacity-25" />
+      <div className="scanline absolute inset-0" />
+      <div className="ember-field absolute inset-0" />
+
+      <div className="relative z-10 mx-auto grid min-h-[calc(100vh-7rem)] max-w-7xl items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.9, ease: "easeOut" }}
+          className="max-w-4xl"
+        >
+          <motion.div
+            initial={{ clipPath: "inset(0 100% 0 0)" }}
+            animate={{ clipPath: "inset(0 0% 0 0)" }}
+            transition={{ duration: 0.7, delay: 0.15 }}
+            className="mb-6 inline-flex items-center gap-3 border border-orange-400/35 bg-orange-500/10 px-4 py-2 font-mono text-xs uppercase tracking-[0.24em] text-orange-200"
+          >
+            <Disc3 className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+            Real-time Supabase combat feed
+          </motion.div>
+
+          <h1
+            className="glitch-title font-display text-6xl font-bold uppercase leading-[0.82] tracking-normal text-white sm:text-7xl lg:text-9xl"
+            data-text="BGMI WAR ROOM"
+          >
+            BGMI War Room
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
-            Real-time tournaments, registrations, rosters, room releases, check-ins, results,
-            leaderboards, notifications, and admin operations with live refresh.
+            Register your squad, track live standings, reveal match drops, and run the entire
+            tournament from one battle-ready command center.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <a href="#register" className="neon-button">
-              Register Your Team <ChevronRight className="h-4 w-4" />
-            </a>
-            <a href="#leaderboard" className="ghost-button">
-              View Live Standings
+
+          <div className="mt-9 flex flex-wrap items-center gap-4">
+            <MagneticButton href="#register">
+              Register Now <ChevronRight className="h-5 w-5" />
+            </MagneticButton>
+            <a
+              href="#leaderboard"
+              className="inline-flex min-h-12 items-center gap-2 border border-white/15 bg-white/5 px-5 font-mono text-xs font-bold uppercase tracking-[0.18em] text-white transition hover:border-green-300/50 hover:text-green-200"
+            >
+              <Trophy className="h-4 w-4" /> View Live Board
             </a>
           </div>
-          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Stat label="Prize pool" value={totalPrize} icon={Trophy} />
-            <Stat label="Teams" value={`${registered}/${slots || 0}`} icon={Users} />
-            <Stat label="Events" value={String(data.tournaments.length)} icon={CalendarDays} />
-            <Stat
-              label="Live sync"
-              value={data.source === "database" || data.source === "supabase" ? "5 sec" : "Waiting"}
-              icon={Zap}
-            />
-          </div>
-        </div>
-        <div className="relative z-10">
-          <Card className="hud-card p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-cyan-300">
-                  Live Leaderboard Feed
-                </p>
-                <h2 className="mt-2 text-2xl font-black uppercase text-white">
-                  {data.tournaments.find((item) => item.status === "Live")?.name ??
-                    "Awaiting Live Tournament"}
-                </h2>
-              </div>
-              <StatusBadge
-                status={
-                  data.source === "database" || data.source === "supabase" ? "Live" : "Syncing"
-                }
-              />
+        </motion.div>
+
+        <motion.aside
+          initial={{ opacity: 0, x: 44, rotateY: -8 }}
+          animate={{ opacity: 1, x: 0, rotateY: 0 }}
+          transition={{ duration: 0.8, delay: 0.35 }}
+          className="clip-panel hud-panel p-5"
+        >
+          <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-4">
+            <div>
+              <p className="font-mono text-xs uppercase tracking-[0.22em] text-green-300">
+                Registration deadline
+              </p>
+              <h2 className="mt-1 font-display text-4xl font-bold uppercase text-white">
+                {activeTournament?.name ?? "Awaiting live event"}
+              </h2>
             </div>
-            {topTeams.length > 0 ? (
-              <div className="mt-5 overflow-hidden rounded-md border border-white/10">
-                {topTeams.map((team) => (
-                  <div
-                    key={team.name}
-                    className="grid grid-cols-[40px_1fr_auto] items-center gap-3 border-b border-white/10 bg-white/[0.03] px-3 py-3 last:border-b-0"
-                  >
-                    <Rank rank={team.rank} />
-                    <TeamIdentity team={team} />
-                    <p className="text-xl font-black text-cyan-200">{totalPoints(team)}</p>
-                  </div>
-                ))}
-              </div>
+            <Zap className="h-8 w-8 text-orange-300" />
+          </div>
+
+          <div className="mt-5 grid grid-cols-4 gap-2">
+            {countdown ? (
+              Object.entries(countdown).map(([label, value]) => (
+                <div key={label} className="digital-tile">
+                  <span>{String(value).padStart(2, "0")}</span>
+                  <small>{label}</small>
+                </div>
+              ))
             ) : (
-              <EmptyState
-                title="Standings warming up"
-                body="Approved squads and published results will appear here as soon as tournament operations go live."
-              />
+              <div className="col-span-4 border border-orange-300/25 bg-orange-500/10 p-5 font-mono text-xs uppercase tracking-[0.18em] text-orange-100">
+                Countdown arms when a tournament deadline is published.
+              </div>
             )}
-          </Card>
-        </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-3 gap-3">
+            <HudMetric label="Teams" value={`${registered}/${slots || 0}`} />
+            <HudMetric label="Prize" value={activeTournament?.prize ?? "Live"} />
+            <HudMetric label="Mode" value={activeTournament?.mode ?? "Squad"} />
+          </div>
+        </motion.aside>
       </div>
     </section>
   );
 }
 
-function Tournaments({ data }: { data: PlatformData }) {
-  const [filter, setFilter] = useState("All");
-  const visible =
-    filter === "All" ? data.tournaments : data.tournaments.filter((item) => item.status === filter);
+function HudMetric({ label, value }: { label: string; value: string }) {
   return (
-    <Section
-      id="tournaments"
-      eyebrow="Live tournament discovery"
-      title="Real-time tournament cards with slots, prizes, maps, and status."
-    >
-      <div className="mb-6 flex flex-wrap gap-2">
-        {["All", "Registration Open", "Closing Soon", "Live", "Completed"].map((item) => (
-          <button
-            key={item}
-            onClick={() => setFilter(item)}
-            className={`rounded-md border px-3 py-2 text-xs font-bold uppercase tracking-[0.14em] ${filter === item ? "border-cyan-300 bg-cyan-300 text-slate-950" : "border-white/10 bg-white/5 text-slate-300"}`}
-          >
-            {item}
-          </button>
-        ))}
-      </div>
-      {visible.length === 0 ? (
-        <EmptyState
-          title="No published tournaments yet"
-          body="Upcoming events will appear here the moment organizers publish them from the control room."
-        />
-      ) : (
-        <div className="grid gap-5 lg:grid-cols-3">
-          {visible.map((tournament) => (
-            <Card key={tournament.id} className="group overflow-hidden">
-              <div className={`relative h-36 bg-gradient-to-br ${tournament.accent}`}>
-                <div className="grid-overlay absolute inset-0 opacity-40" />
-                <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
-                  <Gamepad2 className="h-10 w-10 text-white" />
-                  <StatusBadge status={tournament.status} />
-                </div>
-              </div>
-              <div className="p-5">
-                <h3 className="text-2xl font-black uppercase text-white">{tournament.name}</h3>
-                <p className="mt-2 text-sm text-slate-400">
-                  {tournament.mode} - {tournament.map}
-                </p>
-                <div className="mt-5 grid grid-cols-2 gap-3">
-                  <MiniMetric label="Prize" value={tournament.prize} />
-                  <MiniMetric label="Entry" value={tournament.fee} />
-                  <MiniMetric
-                    label="Slots"
-                    value={`${tournament.registered}/${tournament.slots}`}
-                  />
-                  <MiniMetric label="Start" value={tournament.starts} />
-                </div>
-                <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10">
-                  <div
-                    className="h-full rounded-full bg-cyan-300"
-                    style={{ width: `${(tournament.registered / tournament.slots) * 100}%` }}
-                  />
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-    </Section>
-  );
-}
-
-function MiniMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border border-white/10 bg-black/20 p-3">
-      <p className="text-[0.65rem] uppercase tracking-[0.18em] text-slate-400">{label}</p>
-      <p className="mt-1 text-lg font-black text-white">{value}</p>
+    <div className="border border-white/10 bg-black/40 p-3">
+      <p className="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-slate-500">{label}</p>
+      <p className="mt-2 truncate font-display text-2xl font-bold uppercase text-white">{value}</p>
     </div>
-  );
-}
-
-function Registration() {
-  const steps = ["Tournament", "Team", "Captain", "Roster", "Payment", "Review"];
-  const [step, setStep] = useState(0);
-  return (
-    <Section
-      id="register"
-      eyebrow="Live registration"
-      title="Registration forms are structured for server validation, payment proof, rosters, and unique Team IDs."
-    >
-      <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
-        <Card className="p-5">
-          {steps.map((label, index) => (
-            <button
-              key={label}
-              onClick={() => setStep(index)}
-              className={`mb-3 flex w-full items-center gap-3 rounded-md border p-3 text-left ${step === index ? "border-cyan-300 bg-cyan-300/15" : "border-white/10 bg-white/5"}`}
-            >
-              <span className="grid h-8 w-8 place-items-center rounded-md bg-white/10 text-sm font-black text-white">
-                {index + 1}
-              </span>
-              <span className="font-bold text-white">{label}</span>
-              {index < step ? <CheckCircle2 className="ml-auto h-4 w-4 text-emerald-300" /> : null}
-            </button>
-          ))}
-        </Card>
-        <Card className="p-5">
-          <p className="text-xs uppercase tracking-[0.18em] text-cyan-300">Step {step + 1} of 6</p>
-          <h3 className="mt-2 text-2xl font-black uppercase text-white">{steps[step]}</h3>
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
-            {[
-              "Tournament ID",
-              "Team name",
-              "Captain UID",
-              "Roster UID validation",
-              "Payment transaction",
-              "Fair-play agreement",
-            ].map((field) => (
-              <Field key={field} label={field} value="Captured securely after submission" />
-            ))}
-            <Uploader label="Logo / payment proof upload" />
-          </div>
-          <div className="mt-6 flex flex-wrap justify-between gap-3">
-            <button onClick={() => setStep(Math.max(0, step - 1))} className="ghost-button">
-              Back
-            </button>
-            <button
-              onClick={() => setStep(Math.min(steps.length - 1, step + 1))}
-              className="neon-button"
-            >
-              {step === steps.length - 1 ? "Submit Registration" : "Continue"}
-            </button>
-          </div>
-        </Card>
-      </div>
-    </Section>
-  );
-}
-
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <label className="block">
-      <span className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-slate-400">
-        {label}
-      </span>
-      <input
-        value={value}
-        readOnly
-        className="mt-2 w-full rounded-md border border-white/10 bg-black/25 px-3 py-3 text-sm text-white outline-none focus:border-cyan-300"
-      />
-    </label>
-  );
-}
-
-function Uploader({ label }: { label: string }) {
-  return (
-    <div className="rounded-md border border-dashed border-cyan-300/40 bg-cyan-300/5 p-4">
-      <Upload className="h-5 w-5 text-cyan-200" />
-      <p className="mt-2 text-sm font-bold text-white">{label}</p>
-      <p className="text-xs text-slate-400">
-        Uploads are validated and routed to secure tournament storage.
-      </p>
-    </div>
-  );
-}
-
-function Leaderboard({ data }: { data: PlatformData }) {
-  const [query, setQuery] = useState("");
-  const filtered = data.teams.filter((team) =>
-    team.name.toLowerCase().includes(query.toLowerCase()),
-  );
-  return (
-    <Section
-      id="leaderboard"
-      eyebrow="Live leaderboard"
-      title="Standings refresh every five seconds from the public API."
-    >
-      <Card className="p-5">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 rounded-md border border-white/10 bg-black/25 px-3 py-2">
-            <Search className="h-4 w-4 text-slate-400" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search team"
-              className="bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
-            />
-          </div>
-          <div className="flex gap-2">
-            <button className="ghost-button">
-              <Filter className="h-4 w-4" /> Phase
-            </button>
-            <button className="ghost-button">
-              <Download className="h-4 w-4" /> Export
-            </button>
-          </div>
-        </div>
-        {filtered.length === 0 ? (
-          <EmptyState
-            title="No leaderboard data"
-            body="Published match results will populate ranking, finishes, WWCD, penalties, and recent form."
-          />
-        ) : (
-          <LeaderboardRows teams={filtered} />
-        )}
-      </Card>
-    </Section>
-  );
-}
-
-function LeaderboardRows({ teams }: { teams: Team[] }) {
-  return (
-    <>
-      <div className="hidden overflow-x-auto lg:block">
-        <table className="w-full min-w-[900px] border-collapse text-left">
-          <thead>
-            <tr className="border-b border-white/10 text-[0.68rem] uppercase tracking-[0.18em] text-slate-400">
-              {[
-                "Rank",
-                "Team",
-                "MP",
-                "WWCD",
-                "Placement",
-                "Finishes",
-                "Penalty",
-                "Total",
-                "Form",
-              ].map((head) => (
-                <th key={head} className="px-3 py-3">
-                  {head}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {teams.map((team) => (
-              <tr key={team.name} className="border-b border-white/10 text-sm">
-                <td className="px-3 py-4">
-                  <Rank rank={team.rank} />
-                </td>
-                <td className="px-3 py-4">
-                  <TeamIdentity team={team} />
-                </td>
-                <td className="px-3 py-4 text-slate-300">{team.matches}</td>
-                <td className="px-3 py-4 text-slate-300">{team.wwcd}</td>
-                <td className="px-3 py-4 text-slate-300">{team.placement}</td>
-                <td className="px-3 py-4 text-slate-300">{team.finishes}</td>
-                <td className="px-3 py-4 text-red-200">-{team.penalty}</td>
-                <td className="px-3 py-4 text-xl font-black text-cyan-200">{totalPoints(team)}</td>
-                <td className="px-3 py-4">
-                  <FormPills form={team.form} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="grid gap-3 lg:hidden">
-        {teams.map((team) => (
-          <div key={team.name} className="rounded-md border border-white/10 bg-white/[0.03] p-4">
-            <div className="flex items-center justify-between gap-3">
-              <TeamIdentity team={team} />
-              <Rank rank={team.rank} />
-            </div>
-            <div className="mt-4 grid grid-cols-4 gap-2 text-center">
-              <MiniMetric label="WWCD" value={String(team.wwcd)} />
-              <MiniMetric label="Fin" value={String(team.finishes)} />
-              <MiniMetric label="Pen" value={`-${team.penalty}`} />
-              <MiniMetric label="Total" value={String(totalPoints(team))} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </>
-  );
-}
-
-function Rank({ rank }: { rank: number }) {
-  return (
-    <span
-      className={`grid h-9 w-9 place-items-center rounded-md font-black ${rank === 1 ? "bg-amber-300 text-black shadow-[0_0_18px_rgba(252,211,77,0.45)]" : rank === 2 ? "bg-slate-300 text-black" : rank === 3 ? "bg-orange-400 text-black" : "bg-white/10 text-white"}`}
-    >
-      {rank}
-    </span>
-  );
-}
-
-function TeamIdentity({ team }: { team: Team }) {
-  return (
-    <div className="flex items-center gap-3">
-      <span className="grid h-10 w-10 place-items-center rounded-md border border-cyan-300/30 bg-cyan-300/10 text-xs font-black text-cyan-100">
-        {team.short}
-      </span>
-      <div>
-        <p className="font-bold text-white">{team.name}</p>
-        <p className="text-xs text-slate-400">
-          {team.region} - Captain {team.captain}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function FormPills({ form }: { form: string[] }) {
-  return (
-    <div className="flex gap-1">
-      {form.map((item, index) => (
-        <span
-          key={`${item}-${index}`}
-          className="grid h-7 w-7 place-items-center rounded-sm bg-white/10 text-[0.68rem] font-bold text-slate-200"
-        >
-          {item}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function ScheduleAndRooms({ data }: { data: PlatformData }) {
-  return (
-    <Section
-      id="schedule"
-      eyebrow="Match control"
-      title="Schedules, rooms, and check-ins update as match control publishes changes."
-    >
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <Card className="p-5">
-          {data.schedules.length === 0 ? (
-            <EmptyState
-              title="No match schedule"
-              body="Match cards appear here when organizers publish phases, maps, room release status, and check-in windows."
-            />
-          ) : (
-            <div className="space-y-3">
-              {data.schedules.map((item) => (
-                <div
-                  key={`${item.match}-${item.date}`}
-                  className="grid gap-3 rounded-md border border-white/10 bg-white/[0.03] p-4 md:grid-cols-[1fr_auto_auto] md:items-center"
-                >
-                  <div>
-                    <p className="font-black uppercase text-white">{item.match}</p>
-                    <p className="text-sm text-slate-400">
-                      {item.date} - {item.time} - {item.group}
-                    </p>
-                  </div>
-                  <span className="text-sm font-bold text-cyan-200">{item.map}</span>
-                  <StatusBadge status={item.status} />
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-        <Card className="p-5">
-          <div className="flex items-center gap-3">
-            <Lock className="h-5 w-5 text-cyan-200" />
-            <h3 className="text-xl font-black uppercase text-white">Room Vault</h3>
-          </div>
-          <p className="mt-4 text-sm leading-6 text-slate-400">
-            Room credentials live in the `MatchRoom` table and are never exposed through public
-            APIs. Approved captains receive them only after `releaseAt`.
-          </p>
-          <div className="mt-5 rounded-md border border-emerald-300/30 bg-emerald-300/10 p-4">
-            <QrCode className="h-8 w-8 text-emerald-200" />
-            <p className="mt-2 font-bold text-white">QR check-in modeled</p>
-            <p className="text-sm text-slate-400">
-              Every team and match has a unique check-in token.
-            </p>
-          </div>
-        </Card>
-      </div>
-    </Section>
-  );
-}
-
-function Dashboard({ data }: { data: PlatformData }) {
-  const topTeam = data.teams[0];
-  return (
-    <Section
-      id="teams"
-      eyebrow="Captain dashboard"
-      title="Captain and team views consume the same live ranking and registration models."
-    >
-      <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
-        <Card className="p-4">
-          {[
-            "Overview",
-            "Registration",
-            "Team Profile",
-            "Roster",
-            "Match Schedule",
-            "Room Details",
-            "Results",
-            "Penalties",
-            "Notifications",
-            "Downloads",
-            "Transfers",
-            "Settings",
-          ].map((item, index) => (
-            <button
-              key={item}
-              className={`mb-2 flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-bold ${index === 0 ? "bg-cyan-300 text-slate-950" : "bg-white/5 text-slate-300"}`}
-            >
-              <Gauge className="h-4 w-4" /> {item}
-            </button>
-          ))}
-        </Card>
-        <div className="grid gap-5">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <Stat label="Team" value={topTeam?.short ?? "None"} icon={Shield} />
-            <Stat label="Current rank" value={topTeam ? `#${topTeam.rank}` : "--"} icon={Crown} />
-            <Stat
-              label="Total points"
-              value={topTeam ? String(totalPoints(topTeam)) : "0"}
-              icon={Zap}
-            />
-            <Stat label="WWCD" value={topTeam ? String(topTeam.wwcd) : "0"} icon={Trophy} />
-          </div>
-          <Card className="p-5">
-            <h3 className="text-xl font-black uppercase text-white">Registration Timeline</h3>
-            <div className="mt-5 grid gap-3 md:grid-cols-5">
-              {["Draft", "Submitted", "Under Review", "Payment Verified", "Approved"].map(
-                (item) => (
-                  <div
-                    key={item}
-                    className="rounded-md border border-emerald-300/30 bg-emerald-300/10 p-3"
-                  >
-                    <CheckCircle2 className="h-5 w-5 text-emerald-200" />
-                    <p className="mt-2 text-sm font-bold text-white">{item}</p>
-                  </div>
-                ),
-              )}
-            </div>
-          </Card>
-        </div>
-      </div>
-    </Section>
-  );
-}
-
-function DropMapAndStats({ data }: { data: PlatformData }) {
-  const chartData = data.teams
-    .slice(0, 6)
-    .map((team) => ({ name: team.short, points: totalPoints(team), finishes: team.finishes }));
-  const pieData = [
-    { name: "Erangel", value: data.schedules.filter((item) => item.map === "Erangel").length || 1 },
-    { name: "Miramar", value: data.schedules.filter((item) => item.map === "Miramar").length || 1 },
-    { name: "Sanhok", value: data.schedules.filter((item) => item.map === "Sanhok").length || 1 },
-    { name: "Vikendi", value: data.schedules.filter((item) => item.map === "Vikendi").length || 1 },
-  ];
-  return (
-    <Section
-      id="statistics"
-      eyebrow="Strategy and analytics"
-      title="Animated drop map and charts render from live teams and schedules."
-    >
-      <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <Card className="relative min-h-[430px] overflow-hidden p-5">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(34,211,238,0.16),transparent_22%),radial-gradient(circle_at_70%_60%,rgba(244,63,94,0.14),transparent_25%)]" />
-          <div className="grid-overlay absolute inset-0 opacity-40" />
-          <div className="relative z-10 flex items-center justify-between">
-            <h3 className="text-xl font-black uppercase text-white">Live Drop Map</h3>
-            <MapPinned className="h-5 w-5 text-cyan-200" />
-          </div>
-          {data.teams.slice(0, 10).map((team, index) => (
-            <div
-              key={team.name}
-              className="absolute rounded-md border border-cyan-300/40 bg-cyan-300/15 px-2 py-1 text-xs font-black text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.24)]"
-              style={{ left: `${12 + ((index * 13) % 72)}%`, top: `${22 + ((index * 17) % 58)}%` }}
-            >
-              {team.short} <span className="text-slate-300">{team.drop}</span>
-            </div>
-          ))}
-        </Card>
-        <div className="grid gap-5">
-          <Card className="p-5">
-            <h3 className="text-xl font-black uppercase text-white">Points Progression</h3>
-            <div className="mt-4 h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <CartesianGrid stroke="rgba(255,255,255,.08)" />
-                  <XAxis dataKey="name" stroke="#94a3b8" />
-                  <YAxis stroke="#94a3b8" />
-                  <Tooltip
-                    contentStyle={{
-                      background: "#080b14",
-                      border: "1px solid rgba(255,255,255,.12)",
-                      color: "#fff",
-                    }}
-                  />
-                  <Bar dataKey="points" fill="#22d3ee" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="finishes" fill="#d946ef" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-          <div className="grid gap-5 md:grid-cols-2">
-            <Card className="p-5">
-              <h3 className="text-lg font-black uppercase text-white">Map Distribution</h3>
-              <div className="mt-4 h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={pieData} innerRadius={48} outerRadius={78} dataKey="value">
-                      {["#22d3ee", "#d946ef", "#f43f5e", "#a3e635"].map((color) => (
-                        <Cell key={color} fill={color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        background: "#080b14",
-                        border: "1px solid rgba(255,255,255,.12)",
-                        color: "#fff",
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-            <Card className="p-5">
-              <h3 className="text-lg font-black uppercase text-white">Scoring Rule</h3>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                {Object.entries(placementPoints).map(([place, points]) => (
-                  <MiniMetric key={place} label={`${place} place`} value={`${points} pts`} />
-                ))}
-              </div>
-            </Card>
-          </div>
-        </div>
-      </div>
-    </Section>
-  );
-}
-
-function ContentPages({ data }: { data: PlatformData }) {
-  const rules = [
-    "Eligibility",
-    "Team composition",
-    "Player verification",
-    "Lobby rules",
-    "Device rules",
-    "Fair-play policy",
-    "Point system",
-    "Penalty system",
-    "Disconnect policy",
-    "Protest and appeals",
-    "Prize distribution",
-    "Disqualification",
-  ];
-  const gallery = [
-    ["Posters", Image],
-    ["Match Highlights", Video],
-    ["Winner Photos", Trophy],
-    ["Behind The Scenes", Image],
-    ["Tournament Moments", Zap],
-    ["YouTube Embeds", Video],
-  ] as Array<[string, Icon]>;
-  return (
-    <Section
-      id="rules"
-      eyebrow="Public content"
-      title="Announcements and content modules are API-backed and ready for admin publishing."
-    >
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="p-5">
-          <h3 className="text-xl font-black uppercase text-white">Announcements</h3>
-          {data.announcements.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-400">No announcements published yet.</p>
-          ) : (
-            <div className="mt-4 space-y-3">
-              {data.announcements.map((item) => (
-                <div
-                  key={item.title}
-                  className="rounded-md border border-white/10 bg-white/[0.03] p-3"
-                >
-                  <div className="flex justify-between gap-3">
-                    <span className="text-xs font-bold uppercase tracking-[0.14em] text-cyan-200">
-                      {item.category}
-                    </span>
-                    <span className="text-xs text-slate-500">{item.date}</span>
-                  </div>
-                  <p className="mt-2 text-sm font-bold text-white">{item.title}</p>
-                  <p className="mt-1 text-xs text-slate-400">{item.state}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-        <Card className="p-5">
-          <h3 className="text-xl font-black uppercase text-white">Rules Library</h3>
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            {rules.map((rule) => (
-              <button
-                key={rule}
-                className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-left text-xs font-bold text-slate-300 hover:border-cyan-300/50"
-              >
-                {rule}
-              </button>
-            ))}
-          </div>
-          <button className="ghost-button mt-4 w-full">
-            <FileText className="h-4 w-4" /> Download Rules PDF
-          </button>
-        </Card>
-        <Card id="gallery" className="p-5">
-          <h3 className="text-xl font-black uppercase text-white">Media Gallery</h3>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            {gallery.map(([label, IconComponent]) => (
-              <div
-                key={label}
-                className="rounded-md border border-white/10 bg-gradient-to-br from-white/10 to-white/[0.02] p-4"
-              >
-                <IconComponent className="h-5 w-5 text-fuchsia-200" />
-                <p className="mt-3 text-sm font-bold text-white">{label}</p>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-    </Section>
-  );
-}
-
-function AdminPanel({ data }: { data: PlatformData }) {
-  const revenueData = data.tournaments.map((item) => ({
-    day: item.starts,
-    registrations: item.registered,
-    revenue: item.registered * Number(item.fee.replace(/[^0-9]/g, "") || 0),
-  }));
-  return (
-    <Section
-      id="admin"
-      eyebrow="Protected admin panel"
-      title="Admin modules control the same live data shown across the public platform."
-    >
-      <div className="grid gap-6 lg:grid-cols-[250px_1fr]">
-        <Card className="p-4">
-          {[
-            "Dashboard",
-            "Tournaments",
-            "Registrations",
-            "Teams",
-            "Players",
-            "Matches",
-            "Results",
-            "Leaderboard",
-            "Drop Locations",
-            "Announcements",
-            "Notifications",
-            "Penalties",
-            "Transfers",
-            "Gallery",
-            "Hall of Fame",
-            "Seasons",
-            "Exports",
-            "Settings",
-            "Audit Logs",
-          ].map((item, index) => (
-            <button
-              key={item}
-              className={`mb-2 flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-xs font-bold ${index === 0 ? "bg-fuchsia-400 text-slate-950" : "bg-white/5 text-slate-300"}`}
-            >
-              <Shield className="h-4 w-4" /> {item}
-            </button>
-          ))}
-        </Card>
-        <div className="grid gap-5">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <Stat label="Active events" value={String(data.tournaments.length)} icon={Trophy} />
-            <Stat label="Pending regs" value="Live" icon={ClipboardCheck} />
-            <Stat label="Entry fees" value="Live" icon={Database} />
-            <Stat label="Open appeals" value="Live" icon={MessageCircle} />
-          </div>
-          <Card className="p-5">
-            <h3 className="text-xl font-black uppercase text-white">Registrations and Revenue</h3>
-            <div className="mt-4 h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={revenueData}>
-                  <defs>
-                    <linearGradient id="cyan" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.65} />
-                      <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid stroke="rgba(255,255,255,.08)" />
-                  <XAxis dataKey="day" stroke="#94a3b8" />
-                  <YAxis stroke="#94a3b8" />
-                  <Tooltip
-                    contentStyle={{
-                      background: "#080b14",
-                      border: "1px solid rgba(255,255,255,.12)",
-                      color: "#fff",
-                    }}
-                  />
-                  <Area dataKey="registrations" stroke="#22d3ee" fill="url(#cyan)" />
-                  <Line dataKey="revenue" stroke="#d946ef" strokeWidth={3} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </div>
-      </div>
-    </Section>
-  );
-}
-
-function Footer() {
-  return (
-    <footer className="border-t border-white/10 bg-[#05060c]">
-      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 lg:grid-cols-[1fr_1fr_1fr] lg:px-6">
-        <div>
-          <p className="text-xl font-black uppercase tracking-[0.12em] text-white">
-            NexBattles BGMI
-          </p>
-          <p className="mt-3 text-sm leading-6 text-slate-400">
-            Original esports tournament management platform with real-time operations and
-            AI-generated battle arena visuals.
-          </p>
-        </div>
-        <div className="grid grid-cols-2 gap-2 text-sm text-slate-300">
-          {[
-            "Home",
-            "Tournaments",
-            "Register",
-            "Leaderboard",
-            "Schedule",
-            "Teams",
-            "Rules",
-            "Contact",
-          ].map((item) => (
-            <a key={item} href={`#${item.toLowerCase()}`} className="hover:text-cyan-200">
-              {item}
-            </a>
-          ))}
-        </div>
-        <div className="text-sm text-slate-400">
-          <p className="font-bold text-white">Organizer Contact</p>
-          <p className="mt-2">support@nexbattles.example</p>
-          <p>WhatsApp: +91 90000 00000</p>
-          <p>Discord: NexBattles HQ</p>
-        </div>
-      </div>
-    </footer>
   );
 }
 
@@ -1134,13 +437,15 @@ function Section({
   return (
     <section
       id={id}
-      className="relative border-t border-white/10 bg-[#070912] px-4 py-16 lg:px-6 lg:py-24"
+      className="relative overflow-hidden border-t border-white/10 px-4 py-16 lg:px-6 lg:py-24"
     >
-      <div className="grid-overlay absolute inset-0 opacity-20" />
+      <div className="battle-grid absolute inset-0 opacity-10" />
       <div className="relative z-10 mx-auto max-w-7xl">
-        <div className="mb-10 max-w-4xl">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">{eyebrow}</p>
-          <h2 className="mt-3 text-3xl font-black uppercase leading-tight text-white md:text-5xl">
+        <div data-gsap-reveal className="mb-10 max-w-3xl">
+          <p className="font-mono text-xs font-bold uppercase tracking-[0.24em] text-orange-300">
+            {eyebrow}
+          </p>
+          <h2 className="mt-3 font-display text-5xl font-bold uppercase leading-none text-white md:text-7xl">
             {title}
           </h2>
         </div>
@@ -1150,23 +455,747 @@ function Section({
   );
 }
 
-function BgmiTournamentApp() {
-  const { data = emptyPlatformData, isFetching } = usePlatformData();
-  const stableData = useMemo(() => data, [data]);
+function AnimatedNumber({
+  value,
+  prefix = "",
+  suffix = "",
+}: {
+  value: number;
+  prefix?: string;
+  suffix?: string;
+}) {
+  const motionValue = useMotionValue(0);
+  const rounded = useTransform(motionValue, (latest) => Math.round(latest).toLocaleString("en-IN"));
+  const [display, setDisplay] = useState("0");
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const unsubscribe = rounded.on("change", setDisplay);
+    return () => unsubscribe();
+  }, [rounded]);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        motionValue.set(value);
+        observer.disconnect();
+      }
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [motionValue, value]);
 
   return (
-    <div className="min-h-screen bg-[#05060c] text-slate-100">
-      <AppNav />
+    <span ref={ref}>
+      {prefix}
+      {display}
+      {suffix}
+    </span>
+  );
+}
+
+function TournamentInfo({ data }: { data: PlatformData }) {
+  const activeTournament = data.tournaments[0];
+  const prizeNumber = Number((activeTournament?.prize ?? "0").replace(/[^0-9]/g, "")) || 0;
+  const slots = activeTournament?.slots ?? 0;
+  const registered = activeTournament?.registered ?? 0;
+
+  return (
+    <Section id="prizes" eyebrow="Prize pool / tournament info" title="Drop in. Cash out.">
+      <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
+        <div data-gsap-reveal className="clip-panel hud-panel p-6">
+          <p className="font-mono text-xs uppercase tracking-[0.24em] text-slate-400">
+            Current live event
+          </p>
+          <h3 className="mt-4 font-display text-5xl font-bold uppercase text-white">
+            {activeTournament?.name ?? "Waiting for tournament"}
+          </h3>
+          <div className="mt-6 grid grid-cols-2 gap-3">
+            <HudMetric label="Prize Pool" value={activeTournament?.prize ?? "TBA"} />
+            <HudMetric label="Entry" value={activeTournament?.fee ?? "TBA"} />
+            <HudMetric label="Map Pool" value={activeTournament?.map ?? "TBA"} />
+            <HudMetric label="Phase" value={activeTournament?.phase ?? "TBA"} />
+          </div>
+          <div className="mt-6 h-4 border border-green-300/25 bg-black/50 p-1">
+            <div
+              className="health-fill h-full"
+              style={{ width: `${slots ? (registered / slots) * 100 : 0}%` }}
+            />
+          </div>
+          <p className="mt-3 font-mono text-xs uppercase tracking-[0.18em] text-green-200">
+            {registered}/{slots || 0} slots locked
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          {prizeTiers.map((tier, index) => {
+            const Icon = tier.icon;
+            return (
+              <motion.div
+                data-gsap-reveal
+                key={tier.label}
+                whileHover={{ y: -8, rotateX: 5, rotateY: index === 1 ? 0 : index === 0 ? -4 : 4 }}
+                className="clip-panel hud-panel min-h-64 p-5"
+              >
+                <Icon className="h-8 w-8 text-orange-300" />
+                <p className="mt-8 font-mono text-xs uppercase tracking-[0.22em] text-green-300">
+                  {tier.badge}
+                </p>
+                <h3 className="mt-2 font-display text-4xl font-bold uppercase text-white">
+                  {tier.label}
+                </h3>
+                <p className="mt-5 font-display text-5xl font-bold text-orange-300">
+                  {prizeNumber ? (
+                    <AnimatedNumber
+                      value={Math.round(prizeNumber * (Number(tier.split.replace("%", "")) / 100))}
+                      prefix="₹"
+                    />
+                  ) : (
+                    tier.split
+                  )}
+                </p>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+function Registration({ tournaments }: { tournaments: Tournament[] }) {
+  const [step, setStep] = useState(0);
+  const [shake, setShake] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [form, setForm] = useState<RegistrationPayload>({
+    tournamentId: tournaments[0]?.id ?? "",
+    teamName: "",
+    logoFileName: "",
+    captainName: "",
+    captainEmail: "",
+    bgmiUid: "",
+    players: ["", "", "", ""],
+    whatsapp: "",
+    discord: "",
+    paymentFileName: "",
+  });
+
+  useEffect(() => {
+    if (!form.tournamentId && tournaments[0]?.id) {
+      setForm((current) => ({ ...current, tournamentId: tournaments[0].id }));
+    }
+  }, [form.tournamentId, tournaments]);
+
+  const progress = ((step + 1) / registrationSteps.length) * 100;
+
+  function setField(key: keyof RegistrationPayload, value: string) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function setFile(key: "logoFileName" | "paymentFileName", event: ChangeEvent<HTMLInputElement>) {
+    setField(key, event.target.files?.[0]?.name ?? "");
+  }
+
+  function isStepValid() {
+    if (step === 0) return Boolean(form.tournamentId && form.teamName);
+    if (step === 1) return Boolean(form.captainName && form.captainEmail && form.bgmiUid);
+    if (step === 2) return form.players.every(Boolean);
+    if (step === 3) return Boolean(form.whatsapp || form.discord);
+    return Boolean(form.paymentFileName);
+  }
+
+  function failValidation() {
+    setShake(true);
+    window.setTimeout(() => setShake(false), 450);
+  }
+
+  async function submit() {
+    if (!isStepValid()) {
+      failValidation();
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const response = await fetch("/api/public/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!response.ok) throw new Error("Registration API rejected the submission");
+      setSuccess(true);
+    } catch {
+      failValidation();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function next() {
+    if (!isStepValid()) {
+      failValidation();
+      return;
+    }
+    setStep((value) => Math.min(value + 1, registrationSteps.length - 1));
+  }
+
+  return (
+    <Section id="register" eyebrow="Team registration" title="Lock your squad.">
+      <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
+        <div data-gsap-reveal className="clip-panel hud-panel p-6">
+          <p className="font-mono text-xs uppercase tracking-[0.22em] text-green-300">
+            Health bar progress
+          </p>
+          <div className="mt-4 h-5 border border-orange-300/30 bg-black/60 p-1">
+            <motion.div className="health-fill h-full" animate={{ width: `${progress}%` }} />
+          </div>
+          <div className="mt-6 space-y-3">
+            {registrationSteps.map((label, index) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => setStep(index)}
+                className={`flex w-full items-center justify-between border px-4 py-3 text-left font-mono text-xs uppercase tracking-[0.18em] transition ${
+                  index === step
+                    ? "border-orange-300/60 bg-orange-500/15 text-orange-100"
+                    : "border-white/10 bg-white/[0.03] text-slate-400 hover:text-white"
+                }`}
+              >
+                {label}
+                {index < step ? (
+                  <CheckCircle2 className="h-4 w-4 text-green-300" />
+                ) : (
+                  <span>0{index + 1}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <motion.div
+          data-gsap-reveal
+          className={`clip-panel hud-panel p-6 ${shake ? "shake-error" : ""}`}
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={step}
+              initial={{ opacity: 0, x: 48 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -48 }}
+              transition={{ duration: 0.24 }}
+            >
+              <RegistrationStep
+                step={step}
+                form={form}
+                tournaments={tournaments}
+                setField={setField}
+                setFile={setFile}
+                setForm={setForm}
+              />
+            </motion.div>
+          </AnimatePresence>
+
+          <div className="mt-8 flex flex-wrap justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setStep((value) => Math.max(0, value - 1))}
+              className="border border-white/15 bg-white/5 px-5 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-white disabled:opacity-35"
+              disabled={step === 0}
+            >
+              Back
+            </button>
+            {step === registrationSteps.length - 1 ? (
+              <MagneticButton onClick={submit} className={submitting ? "opacity-70" : ""}>
+                {submitting ? "Submitting" : "Submit Squad"} <Upload className="h-5 w-5" />
+              </MagneticButton>
+            ) : (
+              <MagneticButton onClick={next}>
+                Continue <ChevronRight className="h-5 w-5" />
+              </MagneticButton>
+            )}
+          </div>
+        </motion.div>
+      </div>
+
+      <AnimatePresence>
+        {success ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[90] grid place-items-center bg-black/80 px-4 backdrop-blur-md"
+          >
+            <div className="victory-confetti" />
+            <motion.div
+              initial={{ scale: 0.8, rotateX: -16 }}
+              animate={{ scale: 1, rotateX: 0 }}
+              className="clip-panel hud-panel max-w-lg p-8 text-center"
+            >
+              <Trophy className="mx-auto h-14 w-14 text-orange-300" />
+              <h3 className="mt-4 font-display text-6xl font-bold uppercase text-white">
+                Victory Queue
+              </h3>
+              <p className="mt-3 text-slate-300">
+                Your registration entered the live review pipeline. Organizer approval and room
+                alerts will use the contact details you submitted.
+              </p>
+              <button
+                type="button"
+                onClick={() => setSuccess(false)}
+                className="mt-6 border border-green-300/40 bg-green-400/10 px-6 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-green-100"
+              >
+                Continue
+              </button>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </Section>
+  );
+}
+
+function RegistrationStep({
+  step,
+  form,
+  tournaments,
+  setField,
+  setFile,
+  setForm,
+}: {
+  step: number;
+  form: RegistrationPayload;
+  tournaments: Tournament[];
+  setField: (key: keyof RegistrationPayload, value: string) => void;
+  setFile: (key: "logoFileName" | "paymentFileName", event: ChangeEvent<HTMLInputElement>) => void;
+  setForm: React.Dispatch<React.SetStateAction<RegistrationPayload>>;
+}) {
+  if (step === 0) {
+    return (
+      <FormGrid title="Squad identity">
+        <label className="field-shell">
+          Tournament
+          <select
+            value={form.tournamentId}
+            onChange={(event) => setField("tournamentId", event.target.value)}
+          >
+            <option value="">Select live tournament</option>
+            {tournaments.map((tournament) => (
+              <option key={tournament.id} value={tournament.id}>
+                {tournament.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Field
+          label="Team name"
+          value={form.teamName}
+          onChange={(value) => setField("teamName", value)}
+        />
+        <FileField
+          label="Team logo upload"
+          value={form.logoFileName}
+          onChange={(event) => setFile("logoFileName", event)}
+        />
+      </FormGrid>
+    );
+  }
+
+  if (step === 1) {
+    return (
+      <FormGrid title="Captain verification">
+        <Field
+          label="Captain full name"
+          value={form.captainName}
+          onChange={(value) => setField("captainName", value)}
+        />
+        <Field
+          label="Captain email"
+          value={form.captainEmail}
+          onChange={(value) => setField("captainEmail", value)}
+          type="email"
+        />
+        <Field
+          label="BGMI UID"
+          value={form.bgmiUid}
+          onChange={(value) => setField("bgmiUid", value)}
+        />
+      </FormGrid>
+    );
+  }
+
+  if (step === 2) {
+    return (
+      <FormGrid title="Four player slots">
+        {form.players.map((player, index) => (
+          <Field
+            key={index}
+            label={`Player ${index + 1} IGN + UID`}
+            value={player}
+            onChange={(value) =>
+              setForm((current) => ({
+                ...current,
+                players: current.players.map((item, playerIndex) =>
+                  playerIndex === index ? value : item,
+                ),
+              }))
+            }
+          />
+        ))}
+      </FormGrid>
+    );
+  }
+
+  if (step === 3) {
+    return (
+      <FormGrid title="Comms channel">
+        <Field
+          label="WhatsApp number"
+          value={form.whatsapp}
+          onChange={(value) => setField("whatsapp", value)}
+        />
+        <Field
+          label="Discord handle"
+          value={form.discord}
+          onChange={(value) => setField("discord", value)}
+        />
+      </FormGrid>
+    );
+  }
+
+  return (
+    <FormGrid title="Payment proof">
+      <FileField
+        label="Payment screenshot upload"
+        value={form.paymentFileName}
+        onChange={(event) => setFile("paymentFileName", event)}
+      />
+      <div className="border border-orange-300/25 bg-orange-500/10 p-4 text-sm text-orange-50">
+        Screenshots are queued as registration evidence. Connect Supabase Storage later for full
+        binary file storage; the production API already records this submission metadata.
+      </div>
+    </FormGrid>
+  );
+}
+
+function FormGrid({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div>
+      <h3 className="font-display text-5xl font-bold uppercase text-white">{title}</h3>
+      <div className="mt-6 grid gap-4">{children}</div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+}) {
+  return (
+    <label className="field-shell">
+      {label}
+      <input
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="Enter details"
+      />
+    </label>
+  );
+}
+
+function FileField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <label className="field-shell">
+      {label}
+      <span className="flex items-center justify-between gap-3 border border-white/10 bg-black/55 px-4 py-3 text-slate-300">
+        <span className="truncate">{value || "Choose file"}</span>
+        <ImagePlus className="h-4 w-4 text-orange-300" />
+      </span>
+      <input className="sr-only" type="file" accept="image/*" onChange={onChange} />
+    </label>
+  );
+}
+
+function Leaderboard({ data }: { data: PlatformData }) {
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<"rank" | "points" | "finishes">("rank");
+
+  const teams = useMemo(() => {
+    return [...data.teams]
+      .filter((team) =>
+        `${team.name} ${team.short} ${team.region}`.toLowerCase().includes(query.toLowerCase()),
+      )
+      .sort((a, b) => {
+        if (sort === "points") return totalPoints(b) - totalPoints(a);
+        if (sort === "finishes") return b.finishes - a.finishes;
+        return a.rank - b.rank;
+      });
+  }, [data.teams, query, sort]);
+
+  return (
+    <Section id="leaderboard" eyebrow="Live leaderboard" title="Every point bleeds.">
+      <div data-gsap-reveal className="clip-panel hud-panel overflow-hidden">
+        <div className="flex flex-col gap-3 border-b border-white/10 p-4 md:flex-row md:items-center md:justify-between">
+          <label className="flex items-center gap-2 border border-white/10 bg-black/40 px-3 py-2">
+            <Search className="h-4 w-4 text-orange-300" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Filter squads"
+              className="bg-transparent font-mono text-xs uppercase tracking-[0.12em] text-white outline-none"
+            />
+          </label>
+          <div className="flex gap-2">
+            {(["rank", "points", "finishes"] as const).map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setSort(item)}
+                className={`border px-3 py-2 font-mono text-[0.65rem] font-bold uppercase tracking-[0.18em] ${
+                  sort === item
+                    ? "border-orange-300/60 bg-orange-500/15 text-orange-100"
+                    : "border-white/10 text-slate-400"
+                }`}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] text-left">
+            <thead className="font-mono text-[0.65rem] uppercase tracking-[0.22em] text-slate-500">
+              <tr>
+                <th className="p-4">Rank</th>
+                <th className="p-4">Squad</th>
+                <th className="p-4">Region</th>
+                <th className="p-4">WWCD</th>
+                <th className="p-4">Finishes</th>
+                <th className="p-4">Total</th>
+                <th className="p-4">Trend</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teams.length ? (
+                teams.map((team) => <LeaderboardRow key={team.name} team={team} />)
+              ) : (
+                <tr>
+                  <td colSpan={7} className="p-4">
+                    <div className="skeleton-scan h-16 border border-white/10" />
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+function LeaderboardRow({ team }: { team: Team }) {
+  const up = team.form[0] === "W" || team.rank <= 3;
+  return (
+    <motion.tr
+      whileHover={{ backgroundColor: "rgba(255,107,0,0.1)" }}
+      className="border-t border-white/10"
+    >
+      <td className="p-4 font-display text-3xl font-bold text-orange-300">#{team.rank}</td>
+      <td className="p-4">
+        <p className="font-bold text-white">{team.name}</p>
+        <p className="font-mono text-xs uppercase tracking-[0.16em] text-slate-500">
+          {team.short} / {team.captain}
+        </p>
+      </td>
+      <td className="p-4 text-slate-300">{team.region}</td>
+      <td className="p-4 text-white">{team.wwcd}</td>
+      <td className="p-4 text-white">{team.finishes}</td>
+      <td className="p-4 font-display text-3xl font-bold text-white">{totalPoints(team)}</td>
+      <td className="p-4">
+        <span
+          className={`inline-flex items-center gap-1 font-mono text-xs uppercase tracking-[0.18em] ${up ? "text-green-300" : "text-red-300"}`}
+        >
+          {up ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+          {up ? "rising" : "under fire"}
+        </span>
+      </td>
+    </motion.tr>
+  );
+}
+
+function Schedule({ schedules }: { schedules: ScheduleItem[] }) {
+  return (
+    <Section id="schedule" eyebrow="Match schedule" title="Room drops incoming.">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {schedules.length
+          ? schedules.map((match, index) => (
+              <ScheduleCard key={`${match.match}-${index}`} match={match} index={index} />
+            ))
+          : Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={index}
+                data-gsap-reveal
+                className="skeleton-scan h-64 border border-white/10"
+              />
+            ))}
+      </div>
+    </Section>
+  );
+}
+
+function ScheduleCard({ match, index }: { match: ScheduleItem; index: number }) {
+  return (
+    <motion.article
+      data-gsap-reveal
+      whileHover={{ y: -8 }}
+      className="group clip-panel hud-panel min-h-64 p-5"
+    >
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-xs uppercase tracking-[0.22em] text-green-300">
+          {match.group}
+        </span>
+        <span className="border border-orange-300/30 bg-orange-500/10 px-2 py-1 font-mono text-[0.62rem] uppercase tracking-[0.16em] text-orange-100">
+          T-{index + 1} live
+        </span>
+      </div>
+      <h3 className="mt-8 font-display text-5xl font-bold uppercase leading-none text-white">
+        {match.match}
+      </h3>
+      <div className="mt-6 grid gap-2 text-sm text-slate-300">
+        <span className="flex items-center gap-2">
+          <CalendarDays className="h-4 w-4 text-orange-300" /> {match.date} / {match.time}
+        </span>
+        <span className="flex items-center gap-2">
+          <Shield className="h-4 w-4 text-green-300" /> {match.map}
+        </span>
+      </div>
+      <div className="mt-6 translate-y-3 border-t border-white/10 pt-4 opacity-70 transition group-hover:translate-y-0 group-hover:opacity-100">
+        <p className="font-mono text-xs uppercase tracking-[0.18em] text-slate-400">
+          Room ID reveals after check-in
+        </p>
+        <p className="mt-2 font-display text-3xl font-bold uppercase text-orange-300">
+          {match.status}
+        </p>
+      </div>
+    </motion.article>
+  );
+}
+
+function HallOfFame({ teams }: { teams: Team[] }) {
+  const entries = teams.length
+    ? teams.slice(0, 8).map((team) => ({
+        name: team.name,
+        region: team.region,
+        stat: `${totalPoints(team)} PTS`,
+        drop: team.drop,
+      }))
+    : hallFallback;
+  const marquee = [...entries, ...entries];
+
+  return (
+    <Section id="teams" eyebrow="Featured teams / Hall of fame" title="Squads with aura.">
+      <div data-gsap-reveal className="marquee-shell">
+        <div className="marquee-track">
+          {marquee.map((team, index) => (
+            <div key={`${team.name}-${index}`} className="flip-card">
+              <div className="flip-card-inner">
+                <div className="flip-face clip-panel hud-panel">
+                  <Users className="h-8 w-8 text-orange-300" />
+                  <h3 className="mt-8 font-display text-4xl font-bold uppercase text-white">
+                    {team.name}
+                  </h3>
+                  <p className="font-mono text-xs uppercase tracking-[0.18em] text-green-300">
+                    {team.region}
+                  </p>
+                </div>
+                <div className="flip-face flip-back clip-panel hud-panel">
+                  <p className="font-mono text-xs uppercase tracking-[0.2em] text-slate-400">
+                    Battle stats
+                  </p>
+                  <p className="mt-3 font-display text-5xl font-bold uppercase text-orange-300">
+                    {team.stat}
+                  </p>
+                  <p className="mt-4 text-slate-300">Preferred drop: {team.drop}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="border-t border-white/10 bg-black px-4 py-10 lg:px-6">
+      <div className="mx-auto flex max-w-7xl flex-col gap-6 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="font-display text-4xl font-bold uppercase text-white">NexBattles BGMI</p>
+          <p className="mt-1 font-mono text-xs uppercase tracking-[0.2em] text-slate-500">
+            Registration. Standings. Room ops.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          {[
+            ["Discord", Headphones],
+            ["WhatsApp", MessageCircle],
+            ["Rules", Gamepad2],
+          ].map(([label, Icon]) => (
+            <motion.a
+              key={label as string}
+              whileHover={{ y: -4, scale: 1.04 }}
+              href="#register"
+              className="inline-flex items-center gap-2 border border-white/15 bg-white/5 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-slate-200 hover:border-orange-300/50 hover:text-orange-200"
+            >
+              <Icon className="h-4 w-4" /> {label}
+            </motion.a>
+          ))}
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+function BgmiTournamentApp() {
+  useGsapSequences();
+  const { data = emptyPlatformData, isFetching } = usePlatformData();
+  const liveLabel = formatUpdatedAt(data.generatedAt);
+
+  return (
+    <div className="min-h-screen overflow-hidden bg-[#0a0a0f] text-slate-100">
+      <CursorCrosshair />
+      <motion.div
+        initial={{ x: 0 }}
+        animate={{ x: "100%" }}
+        transition={{ duration: 0.75, ease: [0.76, 0, 0.24, 1] }}
+        className="fixed inset-0 z-[100] bg-orange-500"
+      />
+      <AppNav liveLabel={liveLabel} />
       <main>
-        <Hero data={stableData} isFetching={isFetching} />
-        <Tournaments data={stableData} />
-        <Registration />
-        <Leaderboard data={stableData} />
-        <ScheduleAndRooms data={stableData} />
-        <Dashboard data={stableData} />
-        <DropMapAndStats data={stableData} />
-        <ContentPages data={stableData} />
-        <AdminPanel data={stableData} />
+        <Hero data={data} isFetching={isFetching} />
+        <TournamentInfo data={data} />
+        <Registration tournaments={data.tournaments} />
+        <Leaderboard data={data} />
+        <Schedule schedules={data.schedules} />
+        <HallOfFame teams={data.teams} />
       </main>
       <Footer />
     </div>

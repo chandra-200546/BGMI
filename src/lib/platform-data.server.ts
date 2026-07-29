@@ -74,6 +74,19 @@ type SupabaseAnnouncement = {
   publish_at: string;
 };
 
+export type PublicRegistrationSubmission = {
+  tournamentId: string;
+  teamName: string;
+  logoFileName?: string;
+  captainName: string;
+  captainEmail: string;
+  bgmiUid: string;
+  players: string[];
+  whatsapp?: string;
+  discord?: string;
+  paymentFileName?: string;
+};
+
 function formatCurrency(value: number) {
   if (value === 0) return "Free";
   return new Intl.NumberFormat("en-IN", {
@@ -142,6 +155,90 @@ async function supabaseGet<T>(path: string): Promise<T[]> {
   }
 
   return (await response.json()) as T[];
+}
+
+function supabaseHeaders() {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY;
+  if (!process.env.SUPABASE_URL || !key) return undefined;
+
+  return {
+    url: process.env.SUPABASE_URL.replace(/\/$/, ""),
+    headers: {
+      apikey: key,
+      authorization: `Bearer ${key}`,
+      "content-type": "application/json",
+      accept: "application/json",
+    },
+  };
+}
+
+function normalizeSubmission(payload: unknown): PublicRegistrationSubmission {
+  const value = payload as Partial<PublicRegistrationSubmission>;
+  const players = Array.isArray(value.players)
+    ? value.players.map(String).map((item) => item.trim())
+    : [];
+
+  const submission: PublicRegistrationSubmission = {
+    tournamentId: String(value.tournamentId ?? "").trim(),
+    teamName: String(value.teamName ?? "").trim(),
+    logoFileName: String(value.logoFileName ?? "").trim(),
+    captainName: String(value.captainName ?? "").trim(),
+    captainEmail: String(value.captainEmail ?? "").trim(),
+    bgmiUid: String(value.bgmiUid ?? "").trim(),
+    players,
+    whatsapp: String(value.whatsapp ?? "").trim(),
+    discord: String(value.discord ?? "").trim(),
+    paymentFileName: String(value.paymentFileName ?? "").trim(),
+  };
+
+  if (!submission.tournamentId) throw new Error("Tournament is required");
+  if (!submission.teamName) throw new Error("Team name is required");
+  if (!submission.captainName) throw new Error("Captain name is required");
+  if (!submission.captainEmail) throw new Error("Captain email is required");
+  if (!submission.bgmiUid) throw new Error("BGMI UID is required");
+  if (players.length !== 4 || players.some((player) => !player)) {
+    throw new Error("Four player slots are required");
+  }
+  if (!submission.whatsapp && !submission.discord) throw new Error("Contact channel is required");
+  if (!submission.paymentFileName) throw new Error("Payment screenshot is required");
+
+  return submission;
+}
+
+export async function submitPublicRegistration(payload: unknown) {
+  const submission = normalizeSubmission(payload);
+  const supabase = supabaseHeaders();
+
+  if (!supabase) {
+    throw new Error("Supabase is not configured for registration writes");
+  }
+
+  const id = globalThis.crypto?.randomUUID?.() ?? `reg_${Date.now()}`;
+  const response = await fetch(`${supabase.url}/rest/v1/registration_submissions`, {
+    method: "POST",
+    headers: { ...supabase.headers, prefer: "return=representation" },
+    body: JSON.stringify({
+      id,
+      tournament_id: submission.tournamentId,
+      team_name: submission.teamName,
+      logo_file_name: submission.logoFileName,
+      captain_name: submission.captainName,
+      captain_email: submission.captainEmail,
+      bgmi_uid: submission.bgmiUid,
+      players: submission.players,
+      whatsapp: submission.whatsapp,
+      discord: submission.discord,
+      payment_file_name: submission.paymentFileName,
+      status: "SUBMITTED",
+    }),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Supabase registration insert failed: ${response.status} ${detail}`);
+  }
+
+  return { id, status: "SUBMITTED" };
 }
 
 async function getSupabasePlatformData(): Promise<PlatformData | undefined> {

@@ -64,7 +64,7 @@ export const emptyPlatformData: PlatformData = {
   announcements: [],
   generatedAt: new Date(0).toISOString(),
   source: "unconfigured",
-  message: "Connect DATABASE_URL and seed PostgreSQL to activate live tournament data.",
+  message: "Live tournament operations are warming up.",
 };
 
 export function totalPoints(team: Team) {
