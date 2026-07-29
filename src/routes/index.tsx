@@ -8,13 +8,14 @@ import {
   ChevronRight,
   Crosshair,
   Crown,
-  Disc3,
   Gamepad2,
   Headphones,
   ImagePlus,
+  LockKeyhole,
   MessageCircle,
   Search,
   Shield,
+  SlidersHorizontal,
   Skull,
   Swords,
   Trophy,
@@ -35,6 +36,12 @@ import {
   type Team,
   type Tournament,
 } from "../lib/platform-types";
+
+declare global {
+  interface Window {
+    webkitAudioContext?: typeof AudioContext;
+  }
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -71,6 +78,8 @@ type RegistrationPayload = {
   paymentFileName: string;
 };
 
+type SoundName = "hover" | "shot" | "reload" | "reveal" | "victory";
+
 const navItems = [
   ["Arena", "#hero"],
   ["Prizes", "#prizes"],
@@ -78,6 +87,7 @@ const navItems = [
   ["Leaderboard", "#leaderboard"],
   ["Schedule", "#schedule"],
   ["Teams", "#teams"],
+  ["Admin", "#admin"],
 ] as const;
 
 const prizeTiers = [
@@ -145,7 +155,102 @@ function useCountdown(target?: Date) {
   return { days, hours, minutes, seconds };
 }
 
-function useGsapSequences() {
+function useSoundDesign() {
+  const [muted, setMuted] = useState(true);
+  const mutedRef = useRef(true);
+  const contextRef = useRef<AudioContext | null>(null);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("bgmi-sound-muted");
+    if (saved) setMuted(saved === "true");
+  }, []);
+
+  useEffect(() => {
+    mutedRef.current = muted;
+    window.localStorage.setItem("bgmi-sound-muted", String(muted));
+  }, [muted]);
+
+  function getContext() {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!contextRef.current) contextRef.current = new AudioContextClass();
+    return contextRef.current;
+  }
+
+  function tone(
+    context: AudioContext,
+    start: number,
+    frequency: number,
+    duration: number,
+    gain = 0.035,
+  ) {
+    const oscillator = context.createOscillator();
+    const volume = context.createGain();
+    oscillator.type = "square";
+    oscillator.frequency.setValueAtTime(frequency, start);
+    volume.gain.setValueAtTime(gain, start);
+    volume.gain.exponentialRampToValueAtTime(0.001, start + duration);
+    oscillator.connect(volume).connect(context.destination);
+    oscillator.start(start);
+    oscillator.stop(start + duration);
+  }
+
+  function noise(context: AudioContext, duration: number, gain = 0.05) {
+    const buffer = context.createBuffer(1, context.sampleRate * duration, context.sampleRate);
+    const channel = buffer.getChannelData(0);
+    for (let index = 0; index < channel.length; index += 1) {
+      channel[index] = (Math.random() * 2 - 1) * (1 - index / channel.length);
+    }
+    const source = context.createBufferSource();
+    const filter = context.createBiquadFilter();
+    const volume = context.createGain();
+    source.buffer = buffer;
+    filter.type = "lowpass";
+    filter.frequency.value = 900;
+    volume.gain.value = gain;
+    source.connect(filter).connect(volume).connect(context.destination);
+    source.start();
+  }
+
+  function play(name: SoundName) {
+    if (mutedRef.current || typeof window === "undefined") return;
+    const context = getContext();
+    if (context.state === "suspended") void context.resume();
+    const now = context.currentTime;
+
+    if (name === "hover") {
+      tone(context, now, 280, 0.07, 0.018);
+      tone(context, now + 0.045, 520, 0.05, 0.012);
+    } else if (name === "shot") {
+      noise(context, 0.16, 0.08);
+      tone(context, now, 84, 0.12, 0.05);
+    } else if (name === "reload") {
+      tone(context, now, 190, 0.08, 0.03);
+      tone(context, now + 0.11, 360, 0.09, 0.035);
+    } else if (name === "reveal") {
+      noise(context, 0.32, 0.018);
+      tone(context, now + 0.04, 72, 0.24, 0.014);
+    } else {
+      tone(context, now, 523, 0.1, 0.03);
+      tone(context, now + 0.1, 784, 0.12, 0.032);
+      tone(context, now + 0.23, 1046, 0.18, 0.028);
+    }
+  }
+
+  function toggle() {
+    setMuted((value) => {
+      const next = !value;
+      mutedRef.current = next;
+      if (!next) {
+        window.setTimeout(() => play("reload"), 0);
+      }
+      return next;
+    });
+  }
+
+  return { muted, toggle, play };
+}
+
+function useGsapSequences(playSound: (name: SoundName) => void) {
   useEffect(() => {
     let ctx: { revert: () => void } | undefined;
     let cancelled = false;
@@ -183,6 +288,26 @@ function useGsapSequences() {
               },
             );
           });
+
+          gsap.utils.toArray<HTMLElement>("[data-weapon-reload]").forEach((element) => {
+            gsap.fromTo(
+              element,
+              { x: 0, rotate: 0 },
+              {
+                x: -18,
+                rotate: -3,
+                duration: 0.12,
+                yoyo: true,
+                repeat: 1,
+                ease: "power2.out",
+                scrollTrigger: {
+                  trigger: element,
+                  start: "top 72%",
+                  onEnter: () => playSound("reveal"),
+                },
+              },
+            );
+          });
         });
       },
     );
@@ -191,7 +316,7 @@ function useGsapSequences() {
       cancelled = true;
       ctx?.revert();
     };
-  }, []);
+  }, [playSound]);
 }
 
 function MagneticButton({
@@ -199,14 +324,19 @@ function MagneticButton({
   href,
   className = "",
   onClick,
+  playSound,
+  sound = "shot",
 }: {
   children: ReactNode;
   href?: string;
   className?: string;
   onClick?: () => void;
+  playSound?: (name: SoundName) => void;
+  sound?: SoundName;
 }) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
+  const [recoil, setRecoil] = useState(false);
   const springX = useSpring(x, { stiffness: 240, damping: 18 });
   const springY = useSpring(y, { stiffness: 240, damping: 18 });
 
@@ -217,13 +347,20 @@ function MagneticButton({
   }
 
   const props = {
+    onMouseEnter: () => playSound?.("hover"),
     onMouseMove: onMove,
     onMouseLeave: () => {
       x.set(0);
       y.set(0);
     },
+    onClick: () => {
+      playSound?.(sound);
+      setRecoil(true);
+      window.setTimeout(() => setRecoil(false), 220);
+      onClick?.();
+    },
     style: { x: springX, y: springY },
-    className: `magnetic-button ${className}`,
+    className: `magnetic-button ${recoil ? "button-recoil" : ""} ${className}`,
   };
 
   if (href) {
@@ -235,7 +372,7 @@ function MagneticButton({
   }
 
   return (
-    <motion.button type="button" onClick={onClick} {...props}>
+    <motion.button type="button" {...props}>
       {children}
     </motion.button>
   );
@@ -243,24 +380,41 @@ function MagneticButton({
 
 function CursorCrosshair() {
   const [position, setPosition] = useState({ x: -100, y: -100 });
+  const [flash, setFlash] = useState(false);
 
   useEffect(() => {
     const update = (event: PointerEvent) => setPosition({ x: event.clientX, y: event.clientY });
+    const flare = () => {
+      setFlash(true);
+      window.setTimeout(() => setFlash(false), 130);
+    };
     window.addEventListener("pointermove", update);
-    return () => window.removeEventListener("pointermove", update);
+    window.addEventListener("pointerdown", flare);
+    return () => {
+      window.removeEventListener("pointermove", update);
+      window.removeEventListener("pointerdown", flare);
+    };
   }, []);
 
   return (
     <div
-      className="cursor-crosshair pointer-events-none fixed z-[80] hidden h-8 w-8 -translate-x-1/2 -translate-y-1/2 md:block"
+      className={`cursor-crosshair pointer-events-none fixed z-[80] hidden h-8 w-8 -translate-x-1/2 -translate-y-1/2 md:block ${
+        flash ? "cursor-flare" : ""
+      }`}
       style={{ left: position.x, top: position.y }}
     />
   );
 }
 
-function AppNav({ liveLabel }: { liveLabel: string }) {
-  const [muted, setMuted] = useState(true);
-
+function AppNav({
+  liveLabel,
+  muted,
+  toggleSound,
+}: {
+  liveLabel: string;
+  muted: boolean;
+  toggleSound: () => void;
+}) {
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-orange-400/20 bg-black/55 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 lg:px-6">
@@ -297,7 +451,7 @@ function AppNav({ liveLabel }: { liveLabel: string }) {
           <button
             type="button"
             aria-label="Toggle interface sound"
-            onClick={() => setMuted((value) => !value)}
+            onClick={toggleSound}
             className="grid h-10 w-10 place-items-center border border-white/15 bg-white/5 text-slate-200 transition hover:border-orange-300/60 hover:text-orange-200"
           >
             {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
@@ -308,7 +462,15 @@ function AppNav({ liveLabel }: { liveLabel: string }) {
   );
 }
 
-function Hero({ data, isFetching }: { data: PlatformData; isFetching: boolean }) {
+function Hero({
+  data,
+  isFetching,
+  playSound,
+}: {
+  data: PlatformData;
+  isFetching: boolean;
+  playSound: (name: SoundName) => void;
+}) {
   const activeTournament = data.tournaments[0];
   const deadline = parseDisplayDate(activeTournament?.deadline ?? "");
   const countdown = useCountdown(deadline);
@@ -336,29 +498,22 @@ function Hero({ data, isFetching }: { data: PlatformData; isFetching: boolean })
           transition={{ duration: 0.9, ease: "easeOut" }}
           className="max-w-4xl"
         >
-          <motion.div
-            initial={{ clipPath: "inset(0 100% 0 0)" }}
-            animate={{ clipPath: "inset(0 0% 0 0)" }}
-            transition={{ duration: 0.7, delay: 0.15 }}
-            className="mb-6 inline-flex items-center gap-3 border border-orange-400/35 bg-orange-500/10 px-4 py-2 font-mono text-xs uppercase tracking-[0.24em] text-orange-200"
-          >
-            <Disc3 className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-            Real-time Supabase combat feed
-          </motion.div>
-
-          <h1
-            className="glitch-title font-display text-6xl font-bold uppercase leading-[0.82] tracking-normal text-white sm:text-7xl lg:text-9xl"
-            data-text="BGMI WAR ROOM"
-          >
-            BGMI War Room
-          </h1>
+          <div className="relative">
+            <WeaponAssembly active={isFetching} />
+            <h1
+              className="glitch-title relative z-10 font-display text-6xl font-bold uppercase leading-[0.82] tracking-normal text-white sm:text-7xl lg:text-9xl"
+              data-text="BGMI WAR ROOM"
+            >
+              BGMI War Room
+            </h1>
+          </div>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
             Register your squad, track live standings, reveal match drops, and run the entire
             tournament from one battle-ready command center.
           </p>
 
           <div className="mt-9 flex flex-wrap items-center gap-4">
-            <MagneticButton href="#register">
+            <MagneticButton href="#register" playSound={playSound}>
               Register Now <ChevronRight className="h-5 w-5" />
             </MagneticButton>
             <a
@@ -403,6 +558,18 @@ function Hero({ data, isFetching }: { data: PlatformData; isFetching: boolean })
             )}
           </div>
 
+          <div className="mt-5 border border-white/10 bg-black/45 p-4">
+            <div className="flex items-center justify-between">
+              <p className="font-mono text-[0.65rem] uppercase tracking-[0.22em] text-slate-400">
+                Live loading state
+              </p>
+              <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-green-300">
+                {isFetching ? "reloading" : "ready"}
+              </span>
+            </div>
+            <MagazineLoader active={isFetching} />
+          </div>
+
           <div className="mt-5 grid grid-cols-3 gap-3">
             <HudMetric label="Teams" value={`${registered}/${slots || 0}`} />
             <HudMetric label="Prize" value={activeTournament?.prize ?? "Live"} />
@@ -419,6 +586,59 @@ function HudMetric({ label, value }: { label: string; value: string }) {
     <div className="border border-white/10 bg-black/40 p-3">
       <p className="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-slate-500">{label}</p>
       <p className="mt-2 truncate font-display text-2xl font-bold uppercase text-white">{value}</p>
+    </div>
+  );
+}
+
+function WeaponAssembly({ active }: { active: boolean }) {
+  const parts = [
+    { className: "weapon-stock", delay: 0.12, x: -90 },
+    { className: "weapon-body", delay: 0.22, x: 0 },
+    { className: "weapon-barrel", delay: 0.34, x: 110 },
+    { className: "weapon-mag", delay: 0.46, y: 80 },
+    { className: "weapon-scope", delay: 0.58, y: -54 },
+  ];
+
+  return (
+    <motion.div
+      data-weapon-reload
+      className={`weapon-stage ${active ? "weapon-loading" : ""}`}
+      animate={{ y: [0, -8, 0], rotate: [-1, 1, -1] }}
+      transition={{ duration: 5.8, repeat: Infinity, ease: "easeInOut" }}
+      aria-hidden="true"
+    >
+      {parts.map((part) => (
+        <motion.span
+          key={part.className}
+          className={`weapon-part ${part.className}`}
+          initial={{ opacity: 0, x: part.x ?? 0, y: part.y ?? 0, scale: 0.9 }}
+          animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+          transition={{
+            duration: 0.48,
+            delay: part.delay,
+            type: "spring",
+            stiffness: 210,
+            damping: 18,
+          }}
+        />
+      ))}
+      <span className="weapon-flare" />
+    </motion.div>
+  );
+}
+
+function MagazineLoader({ active }: { active: boolean }) {
+  return (
+    <div className="magazine-loader mt-3" aria-hidden="true">
+      {Array.from({ length: 9 }).map((_, index) => (
+        <span
+          key={index}
+          className={
+            active || index < 7 ? "magazine-round magazine-round-active" : "magazine-round"
+          }
+          style={{ animationDelay: `${index * 0.06}s` }}
+        />
+      ))}
     </div>
   );
 }
@@ -505,7 +725,7 @@ function TournamentInfo({ data }: { data: PlatformData }) {
   return (
     <Section id="prizes" eyebrow="Prize pool / tournament info" title="Drop in. Cash out.">
       <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
-        <div data-gsap-reveal className="clip-panel hud-panel p-6">
+        <div data-gsap-reveal data-weapon-reload className="clip-panel hud-panel p-6">
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-slate-400">
             Current live event
           </p>
@@ -565,7 +785,13 @@ function TournamentInfo({ data }: { data: PlatformData }) {
   );
 }
 
-function Registration({ tournaments }: { tournaments: Tournament[] }) {
+function Registration({
+  tournaments,
+  playSound,
+}: {
+  tournaments: Tournament[];
+  playSound: (name: SoundName) => void;
+}) {
   const [step, setStep] = useState(0);
   const [shake, setShake] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -625,6 +851,7 @@ function Registration({ tournaments }: { tournaments: Tournament[] }) {
         body: JSON.stringify(form),
       });
       if (!response.ok) throw new Error("Registration API rejected the submission");
+      playSound("victory");
       setSuccess(true);
     } catch {
       failValidation();
@@ -643,7 +870,7 @@ function Registration({ tournaments }: { tournaments: Tournament[] }) {
 
   return (
     <Section id="register" eyebrow="Team registration" title="Lock your squad.">
-      <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
+      <div data-weapon-reload className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
         <div data-gsap-reveal className="clip-panel hud-panel p-6">
           <p className="font-mono text-xs uppercase tracking-[0.22em] text-green-300">
             Health bar progress
@@ -707,11 +934,16 @@ function Registration({ tournaments }: { tournaments: Tournament[] }) {
               Back
             </button>
             {step === registrationSteps.length - 1 ? (
-              <MagneticButton onClick={submit} className={submitting ? "opacity-70" : ""}>
+              <MagneticButton
+                onClick={submit}
+                playSound={playSound}
+                sound="reload"
+                className={submitting ? "opacity-70" : ""}
+              >
                 {submitting ? "Submitting" : "Submit Squad"} <Upload className="h-5 w-5" />
               </MagneticButton>
             ) : (
-              <MagneticButton onClick={next}>
+              <MagneticButton onClick={next} playSound={playSound} sound="reload">
                 Continue <ChevronRight className="h-5 w-5" />
               </MagneticButton>
             )}
@@ -1143,6 +1375,73 @@ function HallOfFame({ teams }: { teams: Team[] }) {
   );
 }
 
+function AdminPanel({ data }: { data: PlatformData }) {
+  const pendingSignal = data.tournaments.reduce(
+    (sum, tournament) => sum + Math.max(tournament.slots - tournament.registered, 0),
+    0,
+  );
+
+  const adminCards = [
+    {
+      label: "Registration queue",
+      value: `${data.tournaments.reduce((sum, item) => sum + item.registered, 0)} squads`,
+      note: "Approve, waitlist, or reject captain submissions.",
+      icon: Users,
+    },
+    {
+      label: "Room controls",
+      value: `${data.schedules.length} matches`,
+      note: "Prepare room IDs, passwords, release windows, and check-ins.",
+      icon: LockKeyhole,
+    },
+    {
+      label: "Live ops",
+      value: `${pendingSignal} slots`,
+      note: "Monitor slot pressure, announcements, scoring, and disputes.",
+      icon: SlidersHorizontal,
+    },
+  ];
+
+  return (
+    <Section id="admin" eyebrow="Admin panel" title="Organizer command.">
+      <div className="grid gap-4 lg:grid-cols-3">
+        {adminCards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <motion.article
+              key={card.label}
+              data-gsap-reveal
+              whileHover={{ y: -6 }}
+              className="clip-panel hud-panel p-6"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="font-mono text-xs uppercase tracking-[0.22em] text-green-300">
+                    {card.label}
+                  </p>
+                  <h3 className="mt-3 font-display text-5xl font-bold uppercase text-white">
+                    {card.value}
+                  </h3>
+                </div>
+                <span className="grid h-12 w-12 place-items-center border border-orange-300/40 bg-orange-500/10 text-orange-200">
+                  <Icon className="h-5 w-5" />
+                </span>
+              </div>
+              <p className="mt-6 min-h-12 text-sm leading-6 text-slate-300">{card.note}</p>
+              <div className="mt-6 border border-white/10 bg-black/45 p-3">
+                <div className="flex items-center justify-between font-mono text-[0.65rem] uppercase tracking-[0.18em] text-slate-400">
+                  <span>Access</span>
+                  <span className="text-orange-200">Protected workflow</span>
+                </div>
+              </div>
+            </motion.article>
+          );
+        })}
+      </div>
+    </Section>
+  );
+}
+
 function Footer() {
   return (
     <footer className="border-t border-white/10 bg-black px-4 py-10 lg:px-6">
@@ -1175,7 +1474,8 @@ function Footer() {
 }
 
 function BgmiTournamentApp() {
-  useGsapSequences();
+  const sound = useSoundDesign();
+  useGsapSequences(sound.play);
   const { data = emptyPlatformData, isFetching } = usePlatformData();
   const liveLabel = formatUpdatedAt(data.generatedAt);
 
@@ -1188,14 +1488,15 @@ function BgmiTournamentApp() {
         transition={{ duration: 0.75, ease: [0.76, 0, 0.24, 1] }}
         className="fixed inset-0 z-[100] bg-orange-500"
       />
-      <AppNav liveLabel={liveLabel} />
+      <AppNav liveLabel={liveLabel} muted={sound.muted} toggleSound={sound.toggle} />
       <main>
-        <Hero data={data} isFetching={isFetching} />
+        <Hero data={data} isFetching={isFetching} playSound={sound.play} />
         <TournamentInfo data={data} />
-        <Registration tournaments={data.tournaments} />
+        <Registration tournaments={data.tournaments} playSound={sound.play} />
         <Leaderboard data={data} />
         <Schedule schedules={data.schedules} />
         <HallOfFame teams={data.teams} />
+        <AdminPanel data={data} />
       </main>
       <Footer />
     </div>
