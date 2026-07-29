@@ -2019,28 +2019,43 @@ function formatAdminCell(value: unknown) {
 function Footer() {
   return (
     <footer className="border-t border-white/10 bg-black px-4 py-10 lg:px-6">
-      <div className="mx-auto flex max-w-7xl flex-col gap-6 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="font-display text-4xl font-bold uppercase text-white">NexBattles BGMI</p>
-          <p className="mt-1 font-mono text-xs uppercase tracking-[0.2em] text-slate-500">
-            Registration. Standings. Room ops.
-          </p>
+      <div className="mx-auto max-w-7xl">
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="font-display text-4xl font-bold uppercase text-white">NexBattles BGMI</p>
+            <p className="mt-1 font-mono text-xs uppercase tracking-[0.2em] text-slate-500">
+              Registration. Standings. Room ops.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {[
+              ["Discord", Headphones],
+              ["WhatsApp", MessageCircle],
+              ["Rules", Gamepad2],
+            ].map(([label, Icon]) => (
+              <motion.a
+                key={label as string}
+                whileHover={{ y: -4, scale: 1.04 }}
+                href="#register"
+                className="inline-flex items-center gap-2 border border-white/15 bg-white/5 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-slate-200 hover:border-orange-300/50 hover:text-orange-200"
+              >
+                <Icon className="h-4 w-4" /> {label}
+              </motion.a>
+            ))}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-3">
-          {[
-            ["Discord", Headphones],
-            ["WhatsApp", MessageCircle],
-            ["Rules", Gamepad2],
-          ].map(([label, Icon]) => (
-            <motion.a
-              key={label as string}
-              whileHover={{ y: -4, scale: 1.04 }}
-              href="#register"
-              className="inline-flex items-center gap-2 border border-white/15 bg-white/5 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-slate-200 hover:border-orange-300/50 hover:text-orange-200"
-            >
-              <Icon className="h-4 w-4" /> {label}
-            </motion.a>
-          ))}
+
+        <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-6 md:flex-row">
+          <p className="font-mono text-[0.68rem] uppercase tracking-[0.22em] text-slate-500">
+            Designed by
+          </p>
+          <div className="clip-panel border border-cyan-300/25 bg-white/[0.03] p-2 shadow-[0_0_28px_rgba(0,212,255,0.18)]">
+            <img
+              src="/assets/fiveu-technologies.jpeg"
+              alt="FiveU Technologies Pvt Ltd"
+              className="h-14 w-auto max-w-[18rem] object-contain sm:h-16"
+            />
+          </div>
         </div>
       </div>
     </footer>
