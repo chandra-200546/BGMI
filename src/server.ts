@@ -3,6 +3,7 @@ import "./lib/error-capture";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import {
+  getAdminSnapshot,
   getPlatformData,
   runAdminCommand,
   submitPublicRegistration,
@@ -136,6 +137,11 @@ async function handleAdminApi(request: Request): Promise<Response | undefined> {
     if (url.pathname === "/api/admin/command") {
       const result = await runAdminCommand(payload);
       return jsonResponse({ data: result }, { status: 201 });
+    }
+
+    if (url.pathname === "/api/admin/snapshot") {
+      const result = await getAdminSnapshot(payload);
+      return jsonResponse({ data: result });
     }
 
     return jsonResponse({ error: "Admin API route not found" }, { status: 404 });

@@ -86,10 +86,25 @@ drop policy if exists "public read teams" on public.teams;
 drop policy if exists "public read matches" on public.matches;
 drop policy if exists "public read announcements" on public.announcements;
 drop policy if exists "public insert registration submissions" on public.registration_submissions;
+drop policy if exists "admin read registration submissions" on public.registration_submissions;
+drop policy if exists "admin update registration submissions" on public.registration_submissions;
+drop policy if exists "admin insert tournaments" on public.tournaments;
+drop policy if exists "admin insert matches" on public.matches;
+drop policy if exists "admin insert announcements" on public.announcements;
 
 create policy "public read tournaments" on public.tournaments for select using (true);
 create policy "public read teams" on public.teams for select using (true);
 create policy "public read matches" on public.matches for select using (true);
 create policy "public read announcements" on public.announcements for select using (true);
 create policy "public insert registration submissions" on public.registration_submissions
+  for insert with check (true);
+create policy "admin read registration submissions" on public.registration_submissions
+  for select using (true);
+create policy "admin update registration submissions" on public.registration_submissions
+  for update using (true) with check (true);
+create policy "admin insert tournaments" on public.tournaments
+  for insert with check (true);
+create policy "admin insert matches" on public.matches
+  for insert with check (true);
+create policy "admin insert announcements" on public.announcements
   for insert with check (true);

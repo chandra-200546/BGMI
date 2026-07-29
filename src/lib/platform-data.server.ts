@@ -70,8 +70,25 @@ type SupabaseAnnouncement = {
   id: string;
   category: string;
   title: string;
+  body?: string;
   pinned: boolean;
   publish_at: string;
+};
+
+type SupabaseRegistrationSubmission = {
+  id: string;
+  tournament_id: string | null;
+  team_name: string;
+  logo_file_name: string | null;
+  captain_name: string;
+  captain_email: string;
+  bgmi_uid: string;
+  players: string[] | string | null;
+  whatsapp: string | null;
+  discord: string | null;
+  payment_file_name: string | null;
+  status: string;
+  created_at: string;
 };
 
 export type PublicRegistrationSubmission = {
@@ -89,7 +106,7 @@ export type PublicRegistrationSubmission = {
 
 export type AdminCommandPayload = {
   adminKey?: string;
-  action?: "announcement" | "tournament" | "match";
+  action?: "announcement" | "tournament" | "match" | "registrationStatus";
   title?: string;
   body?: string;
   category?: string;
@@ -107,6 +124,8 @@ export type AdminCommandPayload = {
   matchMap?: string;
   matchGroup?: string;
   matchStartsAt?: string;
+  registrationId?: string;
+  registrationStatus?: string;
 };
 
 function formatCurrency(value: number) {
@@ -177,6 +196,30 @@ async function supabaseGet<T>(path: string): Promise<T[]> {
   }
 
   return (await response.json()) as T[];
+}
+
+async function supabaseAdminGet<T>(path: string): Promise<T[]> {
+  const url = process.env.SUPABASE_URL;
+  const keys = [process.env.SUPABASE_SERVICE_ROLE_KEY, process.env.SUPABASE_ANON_KEY].filter(
+    Boolean,
+  ) as string[];
+  if (!url || keys.length === 0) return [];
+
+  let lastError: Error | undefined;
+  for (const key of keys) {
+    const response = await fetch(`${url.replace(/\/$/, "")}/rest/v1/${path}`, {
+      headers: {
+        apikey: key,
+        authorization: `Bearer ${key}`,
+        accept: "application/json",
+      },
+    });
+
+    if (response.ok) return (await response.json()) as T[];
+    lastError = new Error(`Supabase admin REST request failed for ${path}: ${response.status}`);
+  }
+
+  throw lastError ?? new Error(`Supabase admin REST request failed for ${path}`);
 }
 
 function supabaseHeaders() {
@@ -282,19 +325,90 @@ function isoValue(value: unknown, fallbackDays: number) {
 async function supabaseInsert(table: string, body: Record<string, unknown>) {
   const supabase = supabaseHeaders();
   if (!supabase) throw new Error("Supabase is not configured for admin writes");
+  const keys = [process.env.SUPABASE_SERVICE_ROLE_KEY, process.env.SUPABASE_ANON_KEY].filter(
+    Boolean,
+  ) as string[];
 
-  const response = await fetch(`${supabase.url}/rest/v1/${table}`, {
-    method: "POST",
-    headers: { ...supabase.headers, prefer: "return=representation" },
-    body: JSON.stringify(body),
-  });
+  let lastError = "";
+  for (const key of keys) {
+    const response = await fetch(`${supabase.url}/rest/v1/${table}`, {
+      method: "POST",
+      headers: {
+        ...supabase.headers,
+        apikey: key,
+        authorization: `Bearer ${key}`,
+        prefer: "return=representation",
+      },
+      body: JSON.stringify(body),
+    });
 
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`Supabase ${table} insert failed: ${response.status} ${detail}`);
+    if (response.ok) return (await response.json()) as unknown;
+    lastError = `${response.status} ${await response.text()}`;
   }
 
-  return (await response.json()) as unknown;
+  throw new Error(`Supabase ${table} insert failed: ${lastError}`);
+}
+
+async function supabasePatch(table: string, id: string, body: Record<string, unknown>) {
+  const supabase = supabaseHeaders();
+  if (!supabase) throw new Error("Supabase is not configured for admin writes");
+  const keys = [process.env.SUPABASE_SERVICE_ROLE_KEY, process.env.SUPABASE_ANON_KEY].filter(
+    Boolean,
+  ) as string[];
+
+  let lastError = "";
+  for (const key of keys) {
+    const response = await fetch(
+      `${supabase.url}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        headers: {
+          ...supabase.headers,
+          apikey: key,
+          authorization: `Bearer ${key}`,
+          prefer: "return=representation",
+        },
+        body: JSON.stringify(body),
+      },
+    );
+
+    if (response.ok) return (await response.json()) as unknown;
+    lastError = `${response.status} ${await response.text()}`;
+  }
+
+  throw new Error(`Supabase ${table} update failed: ${lastError}`);
+}
+
+export async function getAdminSnapshot(payload: unknown) {
+  const command = payload as AdminCommandPayload;
+  if (!validateAdminKey(command.adminKey)) throw new Error("Invalid admin key");
+
+  const [tournaments, teams, registrations, matches, announcements] = await Promise.all([
+    supabaseAdminGet<SupabaseTournament>("tournaments?select=*&order=starts_at.desc"),
+    supabaseAdminGet<SupabaseTeam>("teams?select=*&order=created_at.desc"),
+    supabaseAdminGet<SupabaseRegistrationSubmission>(
+      "registration_submissions?select=*&order=created_at.desc",
+    ),
+    supabaseAdminGet<SupabaseMatch>("matches?select=*&order=starts_at.desc"),
+    supabaseAdminGet<SupabaseAnnouncement>("announcements?select=*&order=publish_at.desc"),
+  ]);
+
+  return {
+    tournaments,
+    teams: teams.map((team, index) => ({
+      ...team,
+      rank: index + 1,
+      total_points: team.placement_points + team.finishes - team.penalty_points,
+      recent_form: parseList(team.recent_form),
+    })),
+    registrations: registrations.map((registration) => ({
+      ...registration,
+      players: parseList(registration.players),
+    })),
+    matches,
+    announcements,
+    generatedAt: new Date().toISOString(),
+  };
 }
 
 export async function runAdminCommand(payload: unknown) {
@@ -354,6 +468,16 @@ export async function runAdminCommand(payload: unknown) {
       group_name: command.matchGroup?.trim() || "Group A",
     });
     return { id, action: command.action, status: "scheduled" };
+  }
+
+  if (command.action === "registrationStatus") {
+    if (!command.registrationId?.trim()) throw new Error("Registration is required");
+    const status = command.registrationStatus?.trim() || "UNDER_REVIEW";
+    await supabasePatch("registration_submissions", command.registrationId.trim(), {
+      status,
+      updated_at: new Date().toISOString(),
+    });
+    return { id: command.registrationId.trim(), action: command.action, status };
   }
 
   throw new Error("Unsupported admin command");

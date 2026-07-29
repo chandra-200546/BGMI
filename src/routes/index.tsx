@@ -13,6 +13,7 @@ import {
   ImagePlus,
   LockKeyhole,
   MessageCircle,
+  RefreshCw,
   Search,
   Shield,
   SlidersHorizontal,
@@ -80,6 +81,17 @@ type RegistrationPayload = {
 };
 
 type SoundName = "hover" | "shot" | "reload" | "reveal" | "victory";
+
+type AdminSnapshot = {
+  tournaments: Array<Record<string, unknown>>;
+  teams: Array<Record<string, unknown>>;
+  registrations: Array<Record<string, unknown>>;
+  matches: Array<Record<string, unknown>>;
+  announcements: Array<Record<string, unknown>>;
+  generatedAt: string;
+};
+
+type AdminDataTab = "registrations" | "teams" | "tournaments" | "matches" | "announcements";
 
 const navItems = [
   ["Arena", "#hero"],
@@ -1398,9 +1410,11 @@ function AdminPanelModal({
 }) {
   const [adminKey, setAdminKey] = useState("");
   const [unlocked, setUnlocked] = useState(false);
-  const [activeTask, setActiveTask] = useState<"announcement" | "tournament" | "match">(
-    "announcement",
-  );
+  const [activeTask, setActiveTask] = useState<
+    "announcement" | "tournament" | "match" | "registrationStatus"
+  >("announcement");
+  const [activeDataTab, setActiveDataTab] = useState<AdminDataTab>("registrations");
+  const [snapshot, setSnapshot] = useState<AdminSnapshot | undefined>();
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
@@ -1421,6 +1435,8 @@ function AdminPanelModal({
     matchMap: "Erangel",
     matchGroup: "Group A",
     matchStartsAt: "",
+    registrationId: "",
+    registrationStatus: "APPROVED",
   });
 
   useEffect(() => {
@@ -1445,11 +1461,23 @@ function AdminPanelModal({
       if (!response.ok) throw new Error("Wrong admin key");
       setUnlocked(true);
       setStatus("Admin command deck unlocked.");
+      await loadSnapshot();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Unable to unlock admin panel");
     } finally {
       setBusy(false);
     }
+  }
+
+  async function loadSnapshot() {
+    const response = await fetch("/api/admin/snapshot", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ adminKey }),
+    });
+    const payload = (await response.json()) as { data?: AdminSnapshot; error?: string };
+    if (!response.ok || !payload.data) throw new Error(payload.error ?? "Unable to load database");
+    setSnapshot(payload.data);
   }
 
   async function runCommand() {
@@ -1464,6 +1492,7 @@ function AdminPanelModal({
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? "Admin command failed");
       setStatus(`${activeTask} command completed.`);
+      await loadSnapshot();
       onChanged();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Admin command failed");
@@ -1584,26 +1613,29 @@ function AdminPanelModal({
 
                   <div>
                     <div className="mb-4 flex flex-wrap gap-2">
-                      {(["announcement", "tournament", "match"] as const).map((task) => (
-                        <button
-                          key={task}
-                          type="button"
-                          onClick={() => setActiveTask(task)}
-                          className={`border px-4 py-3 font-mono text-[0.68rem] font-bold uppercase tracking-[0.18em] ${
-                            activeTask === task
-                              ? "border-orange-300/60 bg-orange-500/15 text-orange-100"
-                              : "border-white/10 bg-white/[0.03] text-slate-400"
-                          }`}
-                        >
-                          {task}
-                        </button>
-                      ))}
+                      {(["announcement", "tournament", "match", "registrationStatus"] as const).map(
+                        (task) => (
+                          <button
+                            key={task}
+                            type="button"
+                            onClick={() => setActiveTask(task)}
+                            className={`border px-4 py-3 font-mono text-[0.68rem] font-bold uppercase tracking-[0.18em] ${
+                              activeTask === task
+                                ? "border-orange-300/60 bg-orange-500/15 text-orange-100"
+                                : "border-white/10 bg-white/[0.03] text-slate-400"
+                            }`}
+                          >
+                            {task}
+                          </button>
+                        ),
+                      )}
                     </div>
 
                     <AdminTaskFields
                       activeTask={activeTask}
                       form={form}
                       tournaments={data.tournaments}
+                      registrations={snapshot?.registrations ?? []}
                       updateField={updateField}
                     />
 
@@ -1618,6 +1650,44 @@ function AdminPanelModal({
                   </div>
                 </div>
               )}
+
+              {unlocked ? (
+                <div className="mt-8 border-t border-white/10 pt-6">
+                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="font-mono text-xs uppercase tracking-[0.22em] text-orange-300">
+                        Database control room
+                      </p>
+                      <p className="mt-1 text-sm text-slate-400">
+                        View everything stored in Supabase and refresh after organizer actions.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBusy(true);
+                        loadSnapshot()
+                          .then(() => setStatus("Database snapshot refreshed."))
+                          .catch((error: unknown) =>
+                            setStatus(error instanceof Error ? error.message : "Refresh failed"),
+                          )
+                          .finally(() => setBusy(false));
+                      }}
+                      disabled={busy}
+                      className="inline-flex items-center justify-center gap-2 border border-white/15 bg-white/5 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-white disabled:opacity-50"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} />
+                      Refresh
+                    </button>
+                  </div>
+
+                  <AdminDatabaseBrowser
+                    snapshot={snapshot}
+                    activeTab={activeDataTab}
+                    setActiveTab={setActiveDataTab}
+                  />
+                </div>
+              ) : null}
 
               {status ? (
                 <p className="mt-5 border border-white/10 bg-black/45 p-3 font-mono text-xs uppercase tracking-[0.16em] text-orange-100">
@@ -1636,11 +1706,13 @@ function AdminTaskFields({
   activeTask,
   form,
   tournaments,
+  registrations,
   updateField,
 }: {
-  activeTask: "announcement" | "tournament" | "match";
+  activeTask: "announcement" | "tournament" | "match" | "registrationStatus";
   form: Record<string, string | boolean>;
   tournaments: Tournament[];
+  registrations: Array<Record<string, unknown>>;
   updateField: (key: keyof typeof form, value: string | boolean) => void;
 }) {
   if (activeTask === "announcement") {
@@ -1728,6 +1800,41 @@ function AdminTaskFields({
     );
   }
 
+  if (activeTask === "registrationStatus") {
+    return (
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="field-shell">
+          Registration
+          <select
+            value={String(form.registrationId)}
+            onChange={(event) => updateField("registrationId", event.target.value)}
+          >
+            <option value="">Select team submission</option>
+            {registrations.map((registration) => (
+              <option key={String(registration.id)} value={String(registration.id)}>
+                {String(registration.team_name ?? "Team")} /{" "}
+                {String(registration.captain_name ?? "Captain")}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field-shell">
+          Status
+          <select
+            value={String(form.registrationStatus)}
+            onChange={(event) => updateField("registrationStatus", event.target.value)}
+          >
+            {["SUBMITTED", "UNDER_REVIEW", "APPROVED", "WAITLISTED", "REJECTED"].map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <label className="field-shell">
@@ -1767,6 +1874,146 @@ function AdminTaskFields({
       />
     </div>
   );
+}
+
+function AdminDatabaseBrowser({
+  snapshot,
+  activeTab,
+  setActiveTab,
+}: {
+  snapshot?: AdminSnapshot;
+  activeTab: AdminDataTab;
+  setActiveTab: (tab: AdminDataTab) => void;
+}) {
+  const tabs: Array<{ key: AdminDataTab; label: string; columns: string[] }> = [
+    {
+      key: "registrations",
+      label: "Registrations",
+      columns: [
+        "team_name",
+        "captain_name",
+        "captain_email",
+        "bgmi_uid",
+        "players",
+        "whatsapp",
+        "discord",
+        "payment_file_name",
+        "status",
+        "created_at",
+      ],
+    },
+    {
+      key: "teams",
+      label: "Teams",
+      columns: [
+        "rank",
+        "name",
+        "short_name",
+        "region",
+        "captain",
+        "matches_played",
+        "wwcd",
+        "placement_points",
+        "finishes",
+        "total_points",
+        "preferred_drop",
+      ],
+    },
+    {
+      key: "tournaments",
+      label: "Tournaments",
+      columns: [
+        "name",
+        "mode",
+        "status",
+        "prize_pool",
+        "entry_fee",
+        "max_teams",
+        "registered_teams",
+        "starts_at",
+        "registration_deadline",
+        "maps",
+      ],
+    },
+    {
+      key: "matches",
+      label: "Matches",
+      columns: ["name", "group_name", "map", "status", "starts_at", "tournament_id"],
+    },
+    {
+      key: "announcements",
+      label: "Announcements",
+      columns: ["category", "title", "body", "pinned", "publish_at", "tournament_id"],
+    },
+  ];
+
+  const activeConfig = tabs.find((tab) => tab.key === activeTab) ?? tabs[0];
+  const rows = snapshot?.[activeConfig.key] ?? [];
+
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap gap-2">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setActiveTab(tab.key)}
+            className={`border px-3 py-2 font-mono text-[0.65rem] font-bold uppercase tracking-[0.16em] ${
+              activeTab === tab.key
+                ? "border-green-300/50 bg-green-400/10 text-green-100"
+                : "border-white/10 bg-white/[0.03] text-slate-400"
+            }`}
+          >
+            {tab.label} {snapshot ? `(${snapshot[tab.key].length})` : ""}
+          </button>
+        ))}
+      </div>
+
+      <div className="overflow-x-auto border border-white/10 bg-black/45">
+        <table className="w-full min-w-[980px] text-left">
+          <thead className="bg-white/[0.04] font-mono text-[0.62rem] uppercase tracking-[0.18em] text-slate-500">
+            <tr>
+              {activeConfig.columns.map((column) => (
+                <th key={column} className="p-3">
+                  {column.replaceAll("_", " ")}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length ? (
+              rows.map((row, index) => (
+                <tr key={String(row.id ?? index)} className="border-t border-white/10">
+                  {activeConfig.columns.map((column) => (
+                    <td key={column} className="max-w-[18rem] p-3 align-top text-sm text-slate-200">
+                      {formatAdminCell(row[column])}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td className="p-5 text-sm text-slate-400" colSpan={activeConfig.columns.length}>
+                  {snapshot ? "No rows in this table yet." : "Unlocking database snapshot..."}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="mt-3 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-slate-500">
+        Snapshot: {snapshot ? formatUpdatedAt(snapshot.generatedAt) : "not loaded"}
+      </p>
+    </div>
+  );
+}
+
+function formatAdminCell(value: unknown) {
+  if (Array.isArray(value)) return value.join(", ");
+  if (value === null || value === undefined || value === "") return "-";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  return String(value);
 }
 
 function Footer() {
