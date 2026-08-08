@@ -1,9 +1,11 @@
 import { motion } from "framer-motion";
 import {
   CalendarDays,
+  ChevronDown,
   ChevronRight,
   Crown,
   Flame,
+  Lock,
   Search,
   Shield,
   Skull,
@@ -24,6 +26,7 @@ import {
   usePlatformData,
   useSoundDesign,
 } from "../lib/shared-ui";
+import type { PlatformData } from "../lib/platform-types";
 
 const categories = [
   {
@@ -99,21 +102,28 @@ const categories = [
 ];
 
 function Hero({
+  data,
   isFetching,
-  registered,
-  slots,
 }: {
+  data: PlatformData;
   isFetching: boolean;
-  registered: number;
-  slots: number;
 }) {
   const sound = useSoundDesign();
+  const activeTournament = data.tournaments[0];
+  const deadline = parseDisplayDate(activeTournament?.deadline ?? "");
+  const countdown = useCountdown(deadline);
+  const registered = data.tournaments.reduce((sum, t) => sum + t.registered, 0);
+  const slots = data.tournaments.reduce((sum, t) => sum + t.slots, 0);
 
   return (
-    <section id="hero" className="relative overflow-hidden px-4 pt-28 pb-16 lg:px-6">
-      <div className="absolute inset-0">
+    <section
+      id="hero"
+      className="relative flex min-h-screen w-full flex-col justify-between overflow-hidden px-4 pt-24 pb-12 lg:px-8"
+    >
+      {/* Background Parachute Video & Overlay Gradients */}
+      <div className="absolute inset-0 z-0">
         <video
-          className="hidden h-full w-full object-cover opacity-45 md:block"
+          className="hidden h-full w-full object-cover opacity-55 md:block"
           autoPlay
           muted
           loop
@@ -125,7 +135,7 @@ function Hero({
           <source src="/assets/hero-parachute-desktop.mp4" type="video/mp4" />
         </video>
         <video
-          className="block h-full w-full object-cover opacity-45 md:hidden"
+          className="block h-full w-full object-cover opacity-55 md:hidden"
           autoPlay
           muted
           loop
@@ -136,36 +146,166 @@ function Hero({
         >
           <source src="/assets/hero-parachute-mobile.mp4" type="video/mp4" />
         </video>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(255,107,0,0.28),transparent_32rem),linear-gradient(90deg,rgba(5,5,8,0.98),rgba(5,5,8,0.7)_42%,rgba(5,5,8,0.96))]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(255,107,0,0.35),transparent_42rem),linear-gradient(180deg,rgba(5,5,8,0.85)_0%,rgba(5,5,8,0.65)_40%,rgba(5,5,8,0.98)_100%)]" />
       </div>
-      <div className="battle-grid absolute inset-0 opacity-25" />
-      <div className="scanline absolute inset-0" />
 
-      <div className="relative z-10 mx-auto max-w-7xl">
+      <div className="battle-grid absolute inset-0 opacity-30 pointer-events-none" />
+      <div className="scanline absolute inset-0 pointer-events-none" />
+      <div className="ember-field absolute inset-0 pointer-events-none" />
+
+      {/* Main Content Grid: Balanced 2 Columns */}
+      <div className="relative z-10 mx-auto my-auto grid w-full max-w-7xl items-center gap-10 py-6 lg:grid-cols-[1.15fr_0.85fr] lg:gap-12">
+        {/* Left Column: Branding, Title, Subtitle, CTAs */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 36 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="max-w-4xl"
+          transition={{ duration: 0.85, ease: "easeOut" }}
+          className="flex flex-col items-start"
         >
-          <span className="inline-flex items-center gap-2 border border-orange-400/50 bg-orange-500/10 px-3.5 py-1.5 font-mono text-xs uppercase tracking-[0.24em] text-orange-300">
-            <Zap className="h-4 w-4 text-orange-400" /> Competitive BGMI Tournament Portal
+          <span className="inline-flex items-center gap-2 border border-orange-400/60 bg-orange-500/15 px-4 py-2 font-mono text-xs uppercase tracking-[0.24em] text-orange-200 shadow-[0_0_20px_rgba(255,107,0,0.25)]">
+            <Zap className="h-4 w-4 text-orange-400 animate-pulse" /> Official BGMI Competitive Portal
           </span>
-          <h1 className="glitch-title mt-4 font-display text-5xl font-bold uppercase leading-[0.85] text-white sm:text-7xl lg:text-8xl">
-            BGMI Esports Hub
+
+          <h1 className="glitch-title mt-5 font-display text-6xl font-bold uppercase leading-[0.82] tracking-normal text-white sm:text-7xl lg:text-8xl xl:text-9xl">
+            BGMI ESPORTS HUB
           </h1>
-          <p className="mt-4 max-w-2xl font-mono text-sm leading-relaxed text-slate-300">
-            Select a category card below to view live leaderboards, practice scrim lobbies, squad registration, or match schedules.
+
+          <p className="mt-5 max-w-2xl font-mono text-sm leading-relaxed text-slate-200 sm:text-base">
+            India's hardcore battle-royale tournament platform. Register your squad, track real-time standings, reveal match drops, and claim official prize payouts from one command deck.
           </p>
+
+          {/* Action CTAs */}
+          <div className="mt-8 flex flex-wrap items-center gap-4">
+            <Link to="/register">
+              <MagneticButton playSound={sound.play} className="shadow-[0_0_35px_rgba(255,107,0,0.4)]">
+                REGISTER SQUAD <ChevronRight className="h-5 w-5" />
+              </MagneticButton>
+            </Link>
+
+            <Link
+              to="/points-table"
+              className="inline-flex min-h-12 items-center gap-2 border border-green-400/50 bg-green-500/10 px-5 font-mono text-xs font-bold uppercase tracking-[0.2em] text-green-100 transition hover:border-green-300 hover:bg-green-500/20"
+            >
+              <Trophy className="h-4 w-4 text-green-300" /> VIEW LIVE BOARD
+            </Link>
+
+            <a
+              href="#hub-categories"
+              className="inline-flex min-h-12 items-center gap-2 border border-white/20 bg-white/5 px-5 font-mono text-xs font-bold uppercase tracking-[0.2em] text-slate-200 transition hover:border-orange-400 hover:text-white"
+            >
+              EXPLORE HUB <ChevronDown className="h-4 w-4" />
+            </a>
+          </div>
+
+          {/* Metrics Grid */}
+          <div className="mt-8 grid w-full grid-cols-2 gap-3 sm:grid-cols-4 max-w-3xl">
+            <HudMetric label="Active Hub Squads" value={`${registered}/${slots || 24}`} />
+            <HudMetric label="Daily Practice" value="4 Lobbies" />
+            <HudMetric label="Live Board" value="Realtime PTS" />
+            <HudMetric label="Data Source" value={isFetching ? "Reloading" : "Supabase Live"} />
+          </div>
         </motion.div>
 
-        {/* Live Metrics */}
-        <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4 max-w-3xl">
-          <HudMetric label="Active Hub Squads" value={`${registered}/${slots || 24}`} />
-          <HudMetric label="Daily Practice" value="4 Lobbies" />
-          <HudMetric label="Live Board" value="Auto Calculated" />
-          <HudMetric label="Data Source" value={isFetching ? "Reloading" : "Supabase Live"} />
-        </div>
+        {/* Right Column: Live Tournament Command Deck Card */}
+        <motion.aside
+          initial={{ opacity: 0, x: 44, rotateY: -8 }}
+          animate={{ opacity: 1, x: 0, rotateY: 0 }}
+          transition={{ duration: 0.85, delay: 0.25 }}
+          className="clip-panel hud-panel border border-orange-500/40 p-6 md:p-8 backdrop-blur-xl shadow-[0_0_40px_rgba(255,107,0,0.18)]"
+        >
+          <div className="flex items-center justify-between border-b border-white/10 pb-4">
+            <div>
+              <span className="font-mono text-xs uppercase tracking-[0.22em] text-green-300">
+                Spotlight Tournament
+              </span>
+              <h2 className="mt-1 font-display text-4xl font-bold uppercase text-white">
+                {activeTournament?.name ?? "Weekend War Championship"}
+              </h2>
+            </div>
+            <Crown className="h-8 w-8 text-orange-400" />
+          </div>
+
+          {/* Countdown Clock */}
+          <div className="mt-6">
+            <span className="font-mono text-[0.65rem] uppercase tracking-[0.22em] text-slate-400">
+              Registration Countdown
+            </span>
+            <div className="mt-2 grid grid-cols-4 gap-2 text-center">
+              {countdown ? (
+                Object.entries(countdown).map(([label, value]) => (
+                  <div key={label} className="digital-tile">
+                    <span>{String(value).padStart(2, "0")}</span>
+                    <small>{label}</small>
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-4 border border-orange-300/25 bg-orange-500/10 p-3 font-mono text-xs uppercase tracking-[0.18em] text-orange-100">
+                  Registration Window Live
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Slot Health Bar */}
+          <div className="mt-6">
+            <div className="flex items-center justify-between font-mono text-xs text-slate-300">
+              <span>Slot Lock Pressure</span>
+              <span className="text-green-300 font-bold">
+                {registered}/{slots || 24} Squads (
+                {Math.round((registered / (slots || 24)) * 100)}%)
+              </span>
+            </div>
+            <div className="mt-2 h-4 border border-green-300/30 bg-black/60 p-1">
+              <div
+                className="health-fill h-full"
+                style={{ width: `${slots ? (registered / slots) * 100 : 0}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Engine Status & Loader */}
+          <div className="mt-6 border border-white/10 bg-black/45 p-4">
+            <div className="flex items-center justify-between">
+              <p className="font-mono text-[0.65rem] uppercase tracking-[0.22em] text-slate-400">
+                Engine Pipeline
+              </p>
+              <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-green-300">
+                {isFetching ? "Syncing API" : "Engine Ready"}
+              </span>
+            </div>
+            <MagazineLoader active={isFetching} />
+          </div>
+
+          <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
+            <div className="font-mono text-xs">
+              <span className="block text-slate-400">PRIZE POOL</span>
+              <span className="font-display text-2xl font-bold text-orange-400">
+                {activeTournament?.prize ?? "₹50,000 INR"}
+              </span>
+            </div>
+
+            <Link to="/register">
+              <button
+                type="button"
+                onClick={() => sound.play("reload")}
+                className="flex items-center gap-2 border border-orange-400/60 bg-orange-500/20 px-5 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-orange-100 transition hover:bg-orange-500 hover:text-black"
+              >
+                LOCK SQUAD SLOT <ChevronRight className="h-4 w-4" />
+              </button>
+            </Link>
+          </div>
+        </motion.aside>
+      </div>
+
+      {/* Bottom Scroll Indicator Anchor */}
+      <div className="relative z-10 mx-auto mt-4 flex items-center justify-center">
+        <a
+          href="#hub-categories"
+          className="flex flex-col items-center gap-1 font-mono text-[0.65rem] uppercase tracking-[0.24em] text-slate-400 transition hover:text-orange-400"
+        >
+          <span>SCROLL FOR TOP CATEGORIES</span>
+          <ChevronDown className="h-4 w-4 animate-bounce text-orange-400" />
+        </a>
       </div>
     </section>
   );
@@ -175,9 +315,6 @@ export function HomePage() {
   const { data, isFetching } = usePlatformData();
   const sound = useSoundDesign();
   const [query, setQuery] = useState("");
-
-  const registered = data.tournaments.reduce((sum, t) => sum + t.registered, 0);
-  const slots = data.tournaments.reduce((sum, t) => sum + t.slots, 0);
 
   const filteredCategories = useMemo(() => {
     return categories.filter(
@@ -190,7 +327,7 @@ export function HomePage() {
 
   return (
     <>
-      <Hero isFetching={isFetching} registered={registered} slots={slots} />
+      <Hero data={data} isFetching={isFetching} />
 
       {/* Hub Categories Section */}
       <Section id="hub-categories" eyebrow="EXPLORE WHAT WE OFFER" title="OUR TOP CATEGORIES">
