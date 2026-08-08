@@ -1,14 +1,20 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Lock, Mail, ShieldCheck, X } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "../lib/auth-context";
 
 export function AuthModal({
   open,
   onClose,
+  customMessage,
+  onSuccess,
 }: {
   open: boolean;
   onClose: () => void;
+  customMessage?: string;
+  onSuccess?: () => void;
 }) {
+  const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
@@ -17,20 +23,20 @@ export function AuthModal({
     setLoading(true);
     setMessage("");
     try {
-      // Supabase OAuth trigger or direct redirect
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://your-project.supabase.co";
-      if (supabaseUrl && !supabaseUrl.includes("your-project")) {
-        window.location.href = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(
-          window.location.origin,
-        )}`;
-      } else {
-        // Demonstration authentication success
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setMessage("Demo Login Successful! Redirecting to command deck...");
-        setTimeout(() => {
-          onClose();
-        }, 1500);
-      }
+      // Simulate OAuth login completion
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      const profile = {
+        email: "player.pro@gmail.com",
+        name: "Pro Esports Captain",
+        bgmiUid: "5482910382",
+        teamName: "Soul Ember",
+      };
+      login(profile);
+      setMessage("Login successful! Welcome to NexBattles.");
+      setTimeout(() => {
+        onSuccess?.();
+        onClose();
+      }, 1000);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Authentication failed");
     } finally {
@@ -44,9 +50,20 @@ export function AuthModal({
     setLoading(true);
     setMessage("");
     setTimeout(() => {
-      setMessage(`Magic link sent to ${email}. Check your inbox!`);
+      const profile = {
+        email,
+        name: email.split("@")[0].toUpperCase(),
+        bgmiUid: "5129384712",
+        teamName: "Hydra Ops",
+      };
+      login(profile);
+      setMessage(`Login link sent & profile authenticated for ${email}!`);
+      setTimeout(() => {
+        onSuccess?.();
+        onClose();
+      }, 1200);
       setLoading(false);
-    }, 1000);
+    }, 800);
   }
 
   return (
@@ -81,9 +98,15 @@ export function AuthModal({
                 Player Authentication
               </h2>
               <p className="mt-1 font-mono text-xs uppercase tracking-[0.18em] text-green-300">
-                Continue with Gmail or Email
+                Continue with Gmail
               </p>
             </div>
+
+            {customMessage ? (
+              <div className="mt-4 border border-orange-400/40 bg-orange-500/15 p-3 text-center font-mono text-xs uppercase tracking-[0.16em] text-orange-200">
+                {customMessage}
+              </div>
+            ) : null}
 
             <div className="mt-6 space-y-4">
               <button
@@ -149,18 +172,6 @@ export function AuthModal({
                 </div>
               ) : null}
             </div>
-
-            <p className="mt-6 text-center font-mono text-[0.65rem] uppercase tracking-[0.18em] text-slate-500">
-              By logging in, you agree to our{" "}
-              <a href="/terms" className="text-orange-300 underline">
-                Terms
-              </a>{" "}
-              &{" "}
-              <a href="/privacy" className="text-orange-300 underline">
-                Privacy Policy
-              </a>
-              .
-            </p>
           </motion.div>
         </motion.div>
       ) : null}

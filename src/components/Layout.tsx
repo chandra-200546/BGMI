@@ -2,17 +2,20 @@ import {
   Crosshair,
   Gamepad2,
   Headphones,
+  LayoutDashboard,
   LockKeyhole,
   LogIn,
+  LogOut,
   MessageCircle,
   Shield,
+  User,
   Volume2,
   VolumeX,
-  Wallet,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, type ReactNode } from "react";
 import { Link, NavLink } from "react-router-dom";
+import { useAuth, AuthProvider } from "../lib/auth-context";
 import {
   CursorCrosshair,
   formatUpdatedAt,
@@ -22,7 +25,6 @@ import {
 } from "../lib/shared-ui";
 import { AdminPanelModal } from "../pages/Admin";
 import { AuthModal } from "./AuthModal";
-import { RechargeModal } from "./RechargeModal";
 
 export function AppNav({
   liveLabel,
@@ -30,15 +32,15 @@ export function AppNav({
   toggleSound,
   onOpenAdmin,
   onOpenAuth,
-  onOpenRecharge,
 }: {
   liveLabel: string;
   muted: boolean;
   toggleSound: () => void;
   onOpenAdmin: () => void;
   onOpenAuth: () => void;
-  onOpenRecharge: () => void;
 }) {
+  const { user, logout } = useAuth();
+
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-orange-400/20 bg-black/65 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 lg:px-6">
@@ -92,25 +94,39 @@ export function AppNav({
           </NavLink>
         </nav>
 
-        {/* Action Buttons: Wallet Recharge + Login + Mute */}
+        {/* Auth State Action Buttons */}
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onOpenRecharge}
-            className="hidden items-center gap-1.5 border border-orange-400/40 bg-orange-500/10 px-3 py-2 font-mono text-[0.65rem] font-bold uppercase tracking-[0.18em] text-orange-200 transition hover:border-orange-300 hover:bg-orange-500/20 sm:flex"
-          >
-            <Wallet className="h-3.5 w-3.5 text-orange-300" />
-            Recharge (₹0)
-          </button>
+          {user ? (
+            <>
+              <Link to="/dashboard">
+                <button
+                  type="button"
+                  className="inline-flex min-h-10 items-center gap-2 border border-green-400/60 bg-green-500/10 px-3.5 font-mono text-[0.68rem] font-bold uppercase tracking-[0.18em] text-green-100 transition hover:bg-green-500/20"
+                >
+                  <LayoutDashboard className="h-4 w-4 text-green-300" />
+                  My Dashboard
+                </button>
+              </Link>
 
-          <button
-            type="button"
-            onClick={onOpenAuth}
-            className="inline-flex min-h-10 items-center gap-2 border border-orange-400/60 bg-gradient-to-r from-orange-500/20 via-orange-600/20 to-orange-500/20 px-3.5 font-mono text-[0.68rem] font-bold uppercase tracking-[0.18em] text-white transition hover:border-orange-300 hover:bg-orange-500/30 shadow-[0_0_20px_rgba(255,107,0,0.2)]"
-          >
-            <LogIn className="h-4 w-4" />
-            Login
-          </button>
+              <button
+                type="button"
+                onClick={logout}
+                title="Logout"
+                className="grid h-10 w-10 place-items-center border border-white/15 bg-white/5 text-slate-300 transition hover:border-red-400/60 hover:text-red-300"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={onOpenAuth}
+              className="inline-flex min-h-10 items-center gap-2 border border-orange-400/60 bg-gradient-to-r from-orange-500/20 via-orange-600/20 to-orange-500/20 px-3.5 font-mono text-[0.68rem] font-bold uppercase tracking-[0.18em] text-white transition hover:border-orange-300 hover:bg-orange-500/30 shadow-[0_0_20px_rgba(255,107,0,0.2)]"
+            >
+              <LogIn className="h-4 w-4" />
+              Login
+            </button>
+          )}
 
           <button
             type="button"
@@ -252,12 +268,11 @@ export function Footer() {
   );
 }
 
-export function Layout({ children }: { children: ReactNode }) {
+export function LayoutContent({ children }: { children: ReactNode }) {
   const sound = useSoundDesign();
   useGsapSequences(sound.play);
   const [adminOpen, setAdminOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
-  const [rechargeOpen, setRechargeOpen] = useState(false);
   const { data, refetch } = usePlatformData();
   const liveLabel = formatUpdatedAt(data.generatedAt);
 
@@ -276,7 +291,6 @@ export function Layout({ children }: { children: ReactNode }) {
         toggleSound={sound.toggle}
         onOpenAdmin={() => setAdminOpen(true)}
         onOpenAuth={() => setAuthOpen(true)}
-        onOpenRecharge={() => setRechargeOpen(true)}
       />
       <main className="min-h-[calc(100vh-16rem)]">{children}</main>
       <AdminPanelModal
@@ -286,8 +300,15 @@ export function Layout({ children }: { children: ReactNode }) {
         onChanged={() => void refetch()}
       />
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
-      <RechargeModal open={rechargeOpen} onClose={() => setRechargeOpen(false)} />
       <Footer />
     </div>
+  );
+}
+
+export function Layout({ children }: { children: ReactNode }) {
+  return (
+    <AuthProvider>
+      <LayoutContent>{children}</LayoutContent>
+    </AuthProvider>
   );
 }

@@ -9,6 +9,7 @@ import { RegisterPage } from "../pages/Register";
 import { TeamsPage } from "../pages/Teams";
 import { SchedulePage } from "../pages/Schedule";
 import { AdminPage } from "../pages/Admin";
+import { DashboardPage } from "../pages/Dashboard";
 import { TermsPage, PrivacyPage, ContactPage, AboutPage } from "../pages/TermsPrivacy";
 
 export function AppRouter() {
@@ -25,6 +26,7 @@ export function AppRouter() {
           <Route path="/teams" element={<TeamsPage />} />
           <Route path="/schedule" element={<SchedulePage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/contact" element={<ContactPage />} />

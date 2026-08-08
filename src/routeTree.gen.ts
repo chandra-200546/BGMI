@@ -14,6 +14,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DailyGrindRouteImport } from './routes/daily-grind'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as PointsTableRouteImport } from './routes/points-table'
 import { Route as PrivacyRouteImport } from './routes/privacy'
@@ -47,6 +48,11 @@ const ContactRoute = ContactRouteImport.update({
 const DailyGrindRoute = DailyGrindRouteImport.update({
   id: '/daily-grind',
   path: '/daily-grind',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LeaderboardRoute = LeaderboardRouteImport.update({
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/contact': typeof ContactRoute
   '/daily-grind': typeof DailyGrindRoute
+  '/dashboard': typeof DashboardRoute
   '/leaderboard': typeof LeaderboardRoute
   '/points-table': typeof PointsTableRoute
   '/privacy': typeof PrivacyRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/contact': typeof ContactRoute
   '/daily-grind': typeof DailyGrindRoute
+  '/dashboard': typeof DashboardRoute
   '/leaderboard': typeof LeaderboardRoute
   '/points-table': typeof PointsTableRoute
   '/privacy': typeof PrivacyRoute
@@ -134,6 +142,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/contact': typeof ContactRoute
   '/daily-grind': typeof DailyGrindRoute
+  '/dashboard': typeof DashboardRoute
   '/leaderboard': typeof LeaderboardRoute
   '/points-table': typeof PointsTableRoute
   '/privacy': typeof PrivacyRoute
@@ -152,6 +161,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/contact'
     | '/daily-grind'
+    | '/dashboard'
     | '/leaderboard'
     | '/points-table'
     | '/privacy'
@@ -168,6 +178,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/contact'
     | '/daily-grind'
+    | '/dashboard'
     | '/leaderboard'
     | '/points-table'
     | '/privacy'
@@ -184,6 +195,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/contact'
     | '/daily-grind'
+    | '/dashboard'
     | '/leaderboard'
     | '/points-table'
     | '/privacy'
@@ -201,6 +213,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   ContactRoute: typeof ContactRoute
   DailyGrindRoute: typeof DailyGrindRoute
+  DashboardRoute: typeof DashboardRoute
   LeaderboardRoute: typeof LeaderboardRoute
   PointsTableRoute: typeof PointsTableRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -247,6 +260,13 @@ declare module '@tanstack/react-router' {
       path: '/daily-grind'
       fullPath: '/daily-grind'
       preLoaderRoute: typeof DailyGrindRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/leaderboard': {
@@ -321,6 +341,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   ContactRoute: ContactRoute,
   DailyGrindRoute: DailyGrindRoute,
+  DashboardRoute: DashboardRoute,
   LeaderboardRoute: LeaderboardRoute,
   PointsTableRoute: PointsTableRoute,
   PrivacyRoute: PrivacyRoute,
