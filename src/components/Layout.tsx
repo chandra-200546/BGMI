@@ -58,7 +58,7 @@ export function AppNav({
           </span>
         </Link>
 
-        {/* Minimal Nav: Home, WhatsApp Channel, Contact Us */}
+        {/* Minimal Nav: Home, WhatsApp Channel, Contact Us, Admin Panel */}
         <nav className="hidden items-center gap-6 lg:flex">
           <NavLink
             to="/"
@@ -72,6 +72,7 @@ export function AppNav({
           >
             Home
           </NavLink>
+
           <a
             href="https://whatsapp.com/channel/0029VanlLBL9RZARIMR3Vm2W"
             target="_blank"
@@ -80,6 +81,7 @@ export function AppNav({
           >
             <MessageCircle className="h-3.5 w-3.5 text-green-400" /> WhatsApp Channel
           </a>
+
           <NavLink
             to="/contact"
             className={({ isActive }) =>
@@ -91,6 +93,17 @@ export function AppNav({
             }
           >
             Contact Us
+          </NavLink>
+
+          <NavLink
+            to="/admin"
+            className={({ isActive }) =>
+              `flex items-center gap-1.5 border border-orange-400/50 bg-orange-500/10 px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-[0.18em] text-orange-300 transition hover:border-orange-300 hover:bg-orange-500 hover:text-black ${
+                isActive ? "bg-orange-500 text-black border-orange-300 font-extrabold" : ""
+              }`
+            }
+          >
+            <LockKeyhole className="h-3.5 w-3.5" /> Admin Panel
           </NavLink>
         </nav>
 
@@ -207,6 +220,11 @@ export function Footer() {
                   05. Elite Series Registration
                 </Link>
               </li>
+              <li>
+                <Link to="/admin" className="text-orange-400 font-bold transition hover:text-orange-200">
+                  08. Organizer Admin Panel
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -237,8 +255,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link to="/admin" className="transition hover:text-orange-300">
-                  Organizer Command Deck
+                <Link to="/admin" className="text-orange-400 font-bold transition hover:text-orange-200">
+                  Organizer Command Deck (/admin)
                 </Link>
               </li>
             </ul>

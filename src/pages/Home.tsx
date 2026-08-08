@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Crown,
   Flame,
+  LockKeyhole,
   Search,
   Shield,
   Swords,
@@ -96,6 +97,16 @@ const categories = [
     icon: CalendarDays,
     highlight: "Protected Keys",
   },
+  {
+    number: "08",
+    title: "Organizer Admin Panel",
+    subtitle: "Management Command Deck",
+    desc: "Announce new tournaments, delete challenges, review squad registration proofs, and manage live Supabase tables.",
+    route: "/admin",
+    badge: "ADMIN DECK",
+    icon: LockKeyhole,
+    highlight: "Management Control",
+  },
 ];
 
 function Hero({
@@ -186,12 +197,12 @@ function Hero({
               <Trophy className="h-4 w-4 text-green-300" /> VIEW LIVE BOARD
             </Link>
 
-            <a
-              href="#hub-categories"
-              className="inline-flex min-h-12 items-center gap-2 border border-white/20 bg-white/5 px-5 font-mono text-xs font-bold uppercase tracking-[0.2em] text-slate-200 transition hover:border-orange-400 hover:text-white"
+            <Link
+              to="/admin"
+              className="inline-flex min-h-12 items-center gap-2 border border-orange-400/60 bg-orange-500/20 px-5 font-mono text-xs font-bold uppercase tracking-[0.2em] text-orange-200 transition hover:border-orange-300 hover:bg-orange-500 hover:text-black"
             >
-              EXPLORE HUB <ChevronDown className="h-4 w-4" />
-            </a>
+              <LockKeyhole className="h-4 w-4" /> ADMIN PANEL
+            </Link>
           </div>
         </motion.div>
 
@@ -328,7 +339,7 @@ export function HomePage() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search category (e.g. Scrims, Points, Registration)"
+              placeholder="Search category (e.g. Scrims, Points, Admin)"
               className="bg-transparent font-mono text-xs uppercase tracking-[0.14em] text-white outline-none placeholder:text-slate-500 w-full"
             />
           </label>
