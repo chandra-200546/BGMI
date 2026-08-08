@@ -12,7 +12,7 @@ export function TermsPage() {
           <p>
             Strict zero-tolerance policy against cheating, third-party software, radar hacks, or unapproved emulator usage. All matches are monitored and logged.
           </p>
-          <h3 className="font-display text-2xl font-bold uppercase text-white">2. Prize Pool & Wallet</h3>
+          <h3 className="font-display text-2xl font-bold uppercase text-white">2. Prize Pool & Payments</h3>
           <p>
             Prize distributions are processed to approved captains after verification of match recordings and screenshot evidence within 48 hours.
           </p>
@@ -56,16 +56,40 @@ export function ContactPage() {
           <p>
             Need help with team registration, match disputes, room access, or sponsorship inquiries? Reach out to our 24/7 battle operations team.
           </p>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="border border-white/10 bg-black/50 p-4">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="border border-white/10 bg-black/50 p-5">
               <h4 className="font-display text-2xl font-bold uppercase text-white">WhatsApp Support</h4>
-              <p className="mt-2 text-green-300">+91 98765 43210</p>
-              <p className="mt-1 text-slate-400">Available 10:00 AM – 11:00 PM IST</p>
+              <p className="mt-2 text-green-300 font-bold">+91 7996488242</p>
+              <a
+                href="https://wa.me/917996488242"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-block border border-green-400/40 bg-green-500/10 px-3 py-1.5 font-mono text-[0.65rem] font-bold uppercase tracking-[0.16em] text-green-200 hover:bg-green-500 hover:text-black"
+              >
+                Chat on WhatsApp
+              </a>
             </div>
-            <div className="border border-white/10 bg-black/50 p-4">
+            <div className="border border-white/10 bg-black/50 p-5">
               <h4 className="font-display text-2xl font-bold uppercase text-white">Official Email</h4>
-              <p className="mt-2 text-orange-300">support@nexbattles.in</p>
-              <p className="mt-1 text-slate-400">Response within 24 hours</p>
+              <p className="mt-2 text-orange-300 font-bold">Lordsesports3@gmail.com</p>
+              <a
+                href="mailto:Lordsesports3@gmail.com"
+                className="mt-3 inline-block border border-orange-400/40 bg-orange-500/10 px-3 py-1.5 font-mono text-[0.65rem] font-bold uppercase tracking-[0.16em] text-orange-200 hover:bg-orange-500 hover:text-black"
+              >
+                Send Email
+              </a>
+            </div>
+            <div className="border border-white/10 bg-black/50 p-5">
+              <h4 className="font-display text-2xl font-bold uppercase text-white">WhatsApp Channel</h4>
+              <p className="mt-2 text-slate-300 font-bold">Official Announcements</p>
+              <a
+                href="https://wa.me/message/GREAV6EJHCCRA1"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-block border border-cyan-400/40 bg-cyan-500/10 px-3 py-1.5 font-mono text-[0.65rem] font-bold uppercase tracking-[0.16em] text-cyan-200 hover:bg-cyan-500 hover:text-black"
+              >
+                Join Channel
+              </a>
             </div>
           </div>
         </div>

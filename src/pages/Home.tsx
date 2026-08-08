@@ -5,10 +5,8 @@ import {
   ChevronRight,
   Crown,
   Flame,
-  Lock,
   Search,
   Shield,
-  Skull,
   Swords,
   Trophy,
   Users,
@@ -17,7 +15,6 @@ import {
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  HudMetric,
   MagazineLoader,
   MagneticButton,
   parseDisplayDate,
@@ -195,14 +192,6 @@ function Hero({
             >
               EXPLORE HUB <ChevronDown className="h-4 w-4" />
             </a>
-          </div>
-
-          {/* Metrics Grid */}
-          <div className="mt-8 grid w-full grid-cols-2 gap-3 sm:grid-cols-4 max-w-3xl">
-            <HudMetric label="Active Hub Squads" value={`${registered}/${slots || 24}`} />
-            <HudMetric label="Daily Practice" value="4 Lobbies" />
-            <HudMetric label="Live Board" value="Realtime PTS" />
-            <HudMetric label="Data Source" value={isFetching ? "Reloading" : "Supabase Live"} />
           </div>
         </motion.div>
 

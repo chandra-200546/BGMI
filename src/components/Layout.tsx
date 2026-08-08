@@ -73,7 +73,7 @@ export function AppNav({
             Home
           </NavLink>
           <a
-            href="https://whatsapp.com/channel/nexbattles"
+            href="https://wa.me/message/GREAV6EJHCCRA1"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.18em] text-slate-300 transition hover:text-green-300"
@@ -158,7 +158,7 @@ export function Footer() {
             {/* Social Icons */}
             <div className="mt-6 flex flex-wrap gap-2.5">
               {[
-                { label: "WhatsApp", href: "https://whatsapp.com/channel/nexbattles", icon: MessageCircle },
+                { label: "WhatsApp Channel", href: "https://wa.me/message/GREAV6EJHCCRA1", icon: MessageCircle },
                 { label: "Discord", href: "https://discord.gg/nexbattles", icon: Headphones },
                 { label: "YouTube", href: "https://youtube.com/@nexbattles", icon: Gamepad2 },
                 { label: "Instagram", href: "https://instagram.com/nexbattles", icon: Shield },
