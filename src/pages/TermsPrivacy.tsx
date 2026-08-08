@@ -83,7 +83,7 @@ export function ContactPage() {
               <h4 className="font-display text-2xl font-bold uppercase text-white">WhatsApp Channel</h4>
               <p className="mt-2 text-slate-300 font-bold">Official Announcements</p>
               <a
-                href="https://wa.me/message/GREAV6EJHCCRA1"
+                href="https://whatsapp.com/channel/0029VanlLBL9RZARIMR3Vm2W"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-3 inline-block border border-cyan-400/40 bg-cyan-500/10 px-3 py-1.5 font-mono text-[0.65rem] font-bold uppercase tracking-[0.16em] text-cyan-200 hover:bg-cyan-500 hover:text-black"
