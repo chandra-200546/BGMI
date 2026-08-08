@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { LockKeyhole, RefreshCw, ShieldCheck, SlidersHorizontal, Trash2, Users, X } from "lucide-react";
+import { CheckCircle, Eye, LockKeyhole, RefreshCw, ShieldCheck, SlidersHorizontal, Trash2, Users, X, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   formatUpdatedAt,
@@ -42,24 +42,26 @@ export function AdminPanelModal({
   const [activeTask, setActiveTask] = useState<
     "tournament" | "announcement" | "match" | "registrationStatus" | "roomCredentials"
   >("tournament");
-  const [activeDataTab, setActiveDataTab] = useState<AdminDataTab>("tournaments");
+  const [activeDataTab, setActiveDataTab] = useState<AdminDataTab>("registrations");
   const [snapshot, setSnapshot] = useState<AdminSnapshot | undefined>();
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
+  const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
+
   const [form, setForm] = useState({
     title: "",
     body: "",
     category: "Tournament",
     pinned: true,
-    tournamentId: data.tournaments[0]?.id ?? "",
+    tournamentId: "",
     tournamentName: "",
     mode: "Squad",
-    prizePool: "50000",
-    entryFee: "100",
+    prizePool: "",
+    entryFee: "",
     maxTeams: "24",
     startsAt: "",
     registrationDeadline: "",
-    maps: "Erangel, Miramar, Sanhok",
+    maps: "Erangel, Miramar",
     matchName: "",
     matchMap: "Erangel",
     matchGroup: "Group A",
@@ -155,160 +157,168 @@ export function AdminPanelModal({
     }
   }
 
-  async function deleteItem(table: "tournaments" | "announcements" | "registration_submissions" | "matches" | "teams", id: string) {
-    if (!confirm(`Are you sure you want to delete this ${table} entry?`)) return;
+  async function deleteRow(
+    table: "tournaments" | "announcements" | "registration_submissions" | "matches" | "teams",
+    id: string,
+  ) {
+    if (!confirm(`Are you sure you want to delete row ${id} from database?`)) return;
     setBusy(true);
     setStatus("");
     try {
-      let actionName = "deleteTournament";
-      let payloadKey = "tournamentId";
-      if (table === "announcements") {
-        actionName = "deleteAnnouncement";
-        payloadKey = "announcementId";
-      } else if (table === "registration_submissions") {
-        actionName = "deleteRegistration";
-        payloadKey = "registrationId";
-      } else if (table === "matches") {
-        actionName = "deleteMatch";
-        payloadKey = "matchId";
-      } else if (table === "teams") {
-        actionName = "deleteTeam";
-        payloadKey = "teamId";
-      }
+      const actionMap = {
+        tournaments: "deleteTournament",
+        announcements: "deleteAnnouncement",
+        registration_submissions: "deleteRegistration",
+        matches: "deleteMatch",
+        teams: "deleteTeam",
+      } as const;
+
+      const action = actionMap[table];
+      const payloadKey =
+        table === "tournaments"
+          ? "tournamentId"
+          : table === "announcements"
+          ? "announcementId"
+          : table === "registration_submissions"
+          ? "registrationId"
+          : table === "matches"
+          ? "matchId"
+          : "teamId";
 
       const response = await fetch("/api/admin/command", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ adminKey, action: actionName, [payloadKey]: id }),
+        body: JSON.stringify({ adminKey, action, [payloadKey]: id }),
       });
-      const payload = (await response.json()) as { error?: string };
-      if (!response.ok) throw new Error(payload.error ?? "Deletion failed");
-      setStatus(`Entry deleted successfully from ${table}.`);
+      if (!response.ok) {
+        const errorData = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(errorData.error ?? "Delete failed");
+      }
+      setStatus(`Row deleted successfully.`);
       await loadSnapshot();
       onChanged();
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Deletion failed");
+      setStatus(error instanceof Error ? error.message : "Delete failed");
     } finally {
       setBusy(false);
     }
   }
 
-  const pendingSignal = data.tournaments.reduce(
-    (sum, tournament) => sum + Math.max(tournament.slots - tournament.registered, 0),
-    0,
-  );
-
-  const adminCards = [
-    {
-      label: "Registration queue",
-      value: `${snapshot?.registrations?.length ?? data.tournaments.reduce((sum, item) => sum + item.registered, 0)} squads`,
-      note: "Approve, waitlist, or reject captain submissions.",
-      icon: Users,
-    },
-    {
-      label: "Room controls",
-      value: `${snapshot?.matches?.length ?? data.schedules.length} matches`,
-      note: "Prepare room IDs, passwords, release windows, and check-ins.",
-      icon: LockKeyhole,
-    },
-    {
-      label: "Live ops",
-      value: `${pendingSignal} slots open`,
-      note: "Monitor slot pressure, announcements, scoring, and disputes.",
-      icon: SlidersHorizontal,
-    },
-  ];
+  async function updateRegistrationStatus(id: string, newStatus: string) {
+    setBusy(true);
+    setStatus("");
+    try {
+      const response = await fetch("/api/admin/command", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          adminKey,
+          action: "registrationStatus",
+          registrationId: id,
+          registrationStatus: newStatus,
+        }),
+      });
+      if (!response.ok) {
+        const errorData = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(errorData.error ?? "Status update failed");
+      }
+      setStatus(`Registration status updated to ${newStatus}.`);
+      await loadSnapshot();
+      onChanged();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Status update failed");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const contentUI = (
-    <motion.div
-      initial={{ y: 20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      className="clip-panel hud-panel p-5 md:p-7"
-    >
-      <div className="flex flex-col gap-4 border-b border-white/10 pb-5 md:flex-row md:items-start md:justify-between">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between border-b border-white/10 pb-4">
         <div>
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-orange-300">
-            Admin Panel
+            Real Supabase Operations Deck
           </p>
-          <h2 className="mt-2 font-display text-5xl font-bold uppercase leading-none text-white md:text-7xl">
-            Organizer Command Deck
+          <h2 className="font-display text-4xl font-bold uppercase text-white">
+            Organizer Admin Panel
           </h2>
         </div>
-        <div className="border border-green-300/25 bg-green-400/10 px-4 py-3 font-mono text-xs uppercase tracking-[0.18em] text-green-100 flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-green-400" />
-          {unlocked ? "Passcode Verified" : "Passcode Required"}
-        </div>
+        <button
+          type="button"
+          onClick={() => void loadSnapshot()}
+          disabled={busy || !unlocked}
+          className="flex items-center gap-2 border border-white/15 bg-white/5 px-3 py-2 font-mono text-xs uppercase tracking-[0.16em] text-slate-300 hover:border-orange-400 hover:text-white disabled:opacity-40"
+        >
+          <RefreshCw className={`h-4 w-4 ${busy ? "animate-spin text-orange-400" : ""}`} /> Sync DB
+        </button>
       </div>
 
       {!unlocked ? (
-        <div className="mt-6 grid gap-4 md:grid-cols-[1fr_auto]">
-          <label className="field-shell">
-            Supabase Admin Password
+        <div className="clip-panel hud-panel border border-orange-400/40 p-6 space-y-4">
+          <div className="flex items-center gap-3 text-orange-300">
+            <LockKeyhole className="h-6 w-6" />
+            <span className="font-mono text-xs uppercase tracking-[0.2em]">
+              Admin Security Verification Required
+            </span>
+          </div>
+          <p className="font-mono text-xs text-slate-300">
+            Enter the official admin passcode to access live challenge management, squad registration reviews, and database tables.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
             <input
               type="password"
               value={adminKey}
-              onChange={(event) => setAdminKey(event.target.value)}
-              placeholder="Enter official admin password"
+              onChange={(e) => setAdminKey(e.target.value)}
+              placeholder="Enter admin passcode"
+              className="flex-1 border border-white/15 bg-black/60 px-4 py-3 font-mono text-xs text-white outline-none focus:border-orange-400"
             />
-          </label>
-          <button
-            type="button"
-            onClick={unlock}
-            disabled={busy}
-            className="self-end border border-orange-300/50 bg-orange-500/15 px-6 py-4 font-mono text-xs font-bold uppercase tracking-[0.2em] text-orange-100 disabled:opacity-50 hover:bg-orange-500 hover:text-black transition"
-          >
-            {busy ? "Authenticating..." : "Unlock Command Deck"}
-          </button>
+            <button
+              type="button"
+              onClick={() => void unlock()}
+              disabled={busy}
+              className="border border-orange-400/60 bg-orange-500/20 px-6 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-orange-100 hover:bg-orange-500 hover:text-black transition"
+            >
+              {busy ? "Verifying..." : "Unlock Deck"}
+            </button>
+          </div>
+          {status ? (
+            <p className="font-mono text-xs text-orange-200 border border-orange-500/30 bg-black/40 p-3">
+              {status}
+            </p>
+          ) : null}
         </div>
       ) : (
-        <div className="mt-6 grid gap-6 xl:grid-cols-[0.75fr_1.25fr]">
-          <div className="grid gap-3">
-            {adminCards.map((card) => {
-              const Icon = card.icon;
-              return (
-                <div key={card.label} className="border border-white/10 bg-black/45 p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-green-300">
-                        {card.label}
-                      </p>
-                      <p className="mt-1 font-display text-4xl font-bold uppercase text-white">
-                        {card.value}
-                      </p>
-                    </div>
-                    <Icon className="h-5 w-5 text-orange-300" />
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-slate-400">{card.note}</p>
-                </div>
-              );
-            })}
+        <div className="space-y-6">
+          {/* Action Tasks Navigation */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 font-mono text-[0.68rem] uppercase tracking-[0.14em]">
+            {[
+              { id: "tournament", label: "Create Challenge" },
+              { id: "announcement", label: "Broadcast News" },
+              { id: "match", label: "Schedule Match" },
+              { id: "registrationStatus", label: "Queue Manager" },
+              { id: "roomCredentials", label: "Room ID & Pass" },
+            ].map((task) => (
+              <button
+                key={task.id}
+                type="button"
+                onClick={() =>
+                  setActiveTask(
+                    task.id as "tournament" | "announcement" | "match" | "registrationStatus" | "roomCredentials",
+                  )
+                }
+                className={`border p-3 text-center transition ${
+                  activeTask === task.id
+                    ? "border-orange-400 bg-orange-500/20 font-bold text-orange-100 shadow-[0_0_15px_rgba(255,107,0,0.2)]"
+                    : "border-white/10 bg-white/[0.03] text-slate-400 hover:text-white"
+                }`}
+              >
+                {task.label}
+              </button>
+            ))}
           </div>
 
-          <div>
-            {/* Task Selector Tabs */}
-            <div className="mb-4 flex flex-wrap gap-2">
-              {[
-                { key: "tournament", label: "+ Challenge / Tournament" },
-                { key: "announcement", label: "+ Broadcast News" },
-                { key: "match", label: "+ Match Schedule" },
-                { key: "registrationStatus", label: "Registration Queue" },
-                { key: "roomCredentials", label: "Room Credentials" },
-              ].map((task) => (
-                <button
-                  key={task.key}
-                  type="button"
-                  onClick={() => setActiveTask(task.key as typeof activeTask)}
-                  className={`border px-3.5 py-2.5 font-mono text-[0.68rem] font-bold uppercase tracking-[0.16em] transition ${
-                    activeTask === task.key
-                      ? "border-orange-300/60 bg-orange-500/20 text-orange-100"
-                      : "border-white/10 bg-white/[0.03] text-slate-400 hover:text-slate-200"
-                  }`}
-                >
-                  {task.label}
-                </button>
-              ))}
-            </div>
-
+          {/* Active Task Form */}
+          <div className="clip-panel hud-panel border border-white/10 p-5 space-y-4">
             <AdminTaskFields
               activeTask={activeTask}
               form={form}
@@ -317,68 +327,101 @@ export function AdminPanelModal({
               registrations={snapshot?.registrations ?? []}
               updateField={updateField}
             />
+            <div className="pt-2 flex items-center justify-between border-t border-white/10">
+              <span className="font-mono text-[0.68rem] uppercase tracking-[0.16em] text-slate-400">
+                Action: {activeTask}
+              </span>
+              <button
+                type="button"
+                onClick={() => void runCommand()}
+                disabled={busy}
+                className="border border-orange-400/60 bg-orange-500/20 px-6 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.2em] text-orange-100 hover:bg-orange-500 hover:text-black transition"
+              >
+                {busy ? "Executing..." : "Execute Command"}
+              </button>
+            </div>
+            {status ? (
+              <p className="font-mono text-xs text-orange-200 border border-orange-500/30 bg-black/40 p-3">
+                {status}
+              </p>
+            ) : null}
+          </div>
 
-            <button
-              type="button"
-              onClick={runCommand}
-              disabled={busy}
-              className="mt-5 w-full border border-green-300/40 bg-green-400/10 px-6 py-4 font-mono text-xs font-bold uppercase tracking-[0.2em] text-green-100 disabled:opacity-50 hover:bg-green-500 hover:text-black transition"
-            >
-              {busy ? "Executing..." : `Execute ${activeTask} Command`}
-            </button>
+          {/* Real-time Supabase Database Table Inspector */}
+          <div className="clip-panel hud-panel border border-white/10 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-display text-2xl font-bold uppercase text-white flex items-center gap-2">
+                <SlidersHorizontal className="h-5 w-5 text-orange-400" /> Database Table Browser
+              </h3>
+              <span className="font-mono text-xs text-green-300 uppercase tracking-widest">
+                Connected to Supabase REST API
+              </span>
+            </div>
+
+            <AdminDatabaseBrowser
+              snapshot={snapshot}
+              activeTab={activeDataTab}
+              setActiveTab={setActiveDataTab}
+              onDelete={deleteRow}
+              onUpdateStatus={updateRegistrationStatus}
+              onOpenScreenshot={(url) => setSelectedScreenshot(url)}
+            />
           </div>
         </div>
       )}
 
-      {unlocked ? (
-        <div className="mt-8 border-t border-white/10 pt-6">
-          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="font-mono text-xs uppercase tracking-[0.22em] text-orange-300">
-                Database Control Room
-              </p>
-              <p className="mt-1 text-sm text-slate-400">
-                Live Supabase tables viewer with instant record deletion.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setBusy(true);
-                loadSnapshot()
-                  .then(() => setStatus("Database snapshot refreshed."))
-                  .catch((error: unknown) =>
-                    setStatus(error instanceof Error ? error.message : "Refresh failed"),
-                  )
-                  .finally(() => setBusy(false));
-              }}
-              disabled={busy}
-              className="inline-flex items-center justify-center gap-2 border border-white/15 bg-white/5 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-white disabled:opacity-50 hover:border-orange-400"
+      {/* Payment Screenshot Modal */}
+      <AnimatePresence>
+        {selectedScreenshot ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative max-h-[90vh] max-w-3xl overflow-hidden border border-orange-400/60 bg-black p-6 shadow-2xl"
             >
-              <RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} />
-              Refresh Snapshot
-            </button>
-          </div>
-
-          <AdminDatabaseBrowser
-            snapshot={snapshot}
-            activeTab={activeDataTab}
-            setActiveTab={setActiveDataTab}
-            onDelete={deleteItem}
-          />
-        </div>
-      ) : null}
-
-      {status ? (
-        <p className="mt-5 border border-white/10 bg-black/45 p-3 font-mono text-xs uppercase tracking-[0.16em] text-orange-100">
-          {status}
-        </p>
-      ) : null}
-    </motion.div>
+              <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+                <h4 className="font-display text-2xl font-bold uppercase text-orange-300">
+                  📸 Payment Screenshot Receipt
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setSelectedScreenshot(null)}
+                  className="p-1 text-slate-400 hover:text-white"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="max-h-[70vh] overflow-auto flex items-center justify-center border border-white/10 bg-black/80 p-2">
+                <img
+                  src={selectedScreenshot}
+                  alt="Payment Receipt Screenshot"
+                  className="max-h-[65vh] w-auto object-contain"
+                />
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSelectedScreenshot(null)}
+                  className="border border-white/20 bg-white/10 px-5 py-2 font-mono text-xs uppercase text-white hover:bg-white/20"
+                >
+                  Close Receipt
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </div>
   );
 
   if (inline) {
-    return contentUI;
+    return <div className="space-y-6">{contentUI}</div>;
   }
 
   return (
@@ -388,21 +431,25 @@ export function AdminPanelModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[95] overflow-y-auto bg-black/82 px-4 py-8 backdrop-blur-xl"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
         >
-          <div className="mx-auto max-w-6xl">
-            <div className="mb-4 flex justify-end">
+          <motion.div
+            initial={{ scale: 0.96, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.96, opacity: 0 }}
+            className="relative max-h-[90vh] w-full max-w-5xl overflow-y-auto border border-orange-400/40 bg-slate-950 p-6 shadow-2xl"
+          >
+            <div className="absolute right-4 top-4">
               <button
                 type="button"
                 onClick={onClose}
-                className="grid h-11 w-11 place-items-center border border-white/15 bg-white/5 text-white hover:border-orange-300/50"
-                aria-label="Close admin panel"
+                className="border border-white/10 p-2 text-slate-300 hover:border-orange-400 hover:text-white"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             {contentUI}
-          </div>
+          </motion.div>
         </motion.div>
       ) : null}
     </AnimatePresence>
@@ -498,7 +545,7 @@ function AdminTaskFields({
             type="text"
             value={String(form.prizePool)}
             onChange={(e) => updateField("prizePool", e.target.value)}
-            placeholder="50000"
+            placeholder="e.g. 50000"
           />
         </label>
         <label className="field-shell">
@@ -507,7 +554,7 @@ function AdminTaskFields({
             type="text"
             value={String(form.entryFee)}
             onChange={(e) => updateField("entryFee", e.target.value)}
-            placeholder="100"
+            placeholder="e.g. 100"
           />
         </label>
         <label className="field-shell">
@@ -682,7 +729,7 @@ const tableConfigs: Record<
   },
   registrations: {
     label: "Squad Registrations",
-    columns: ["id", "team_name", "captain_name", "captain_email", "bgmi_uid", "status", "created_at"],
+    columns: ["id", "team_name", "captain_name", "captain_email", "bgmi_uid", "players", "whatsapp", "payment_file_name", "status", "created_at"],
   },
   matches: {
     label: "Match Schedules",
@@ -699,11 +746,15 @@ function AdminDatabaseBrowser({
   activeTab,
   setActiveTab,
   onDelete,
+  onUpdateStatus,
+  onOpenScreenshot,
 }: {
   snapshot?: AdminSnapshot;
   activeTab: AdminDataTab;
   setActiveTab: (tab: AdminDataTab) => void;
   onDelete: (table: "tournaments" | "announcements" | "registration_submissions" | "matches" | "teams", id: string) => void;
+  onUpdateStatus: (id: string, status: string) => void;
+  onOpenScreenshot: (url: string) => void;
 }) {
   const activeConfig = tableConfigs[activeTab];
   const rows = snapshot ? (snapshot[activeTab] as Array<Record<string, unknown>>) : [];
@@ -713,8 +764,8 @@ function AdminDatabaseBrowser({
       <div className="mb-4 flex flex-wrap gap-2">
         {(
           [
+            { key: "registrations", label: "Squad Registrations" },
             { key: "tournaments", label: "Tournaments" },
-            { key: "registrations", label: "Registrations" },
             { key: "matches", label: "Matches" },
             { key: "announcements", label: "Announcements" },
             { key: "teams", label: "Teams Leaderboard" },
@@ -724,9 +775,9 @@ function AdminDatabaseBrowser({
             key={tab.key}
             type="button"
             onClick={() => setActiveTab(tab.key)}
-            className={`border px-3 py-2 font-mono text-[0.65rem] font-bold uppercase tracking-[0.16em] ${
+            className={`border px-3.5 py-2 font-mono text-[0.65rem] font-bold uppercase tracking-[0.16em] ${
               activeTab === tab.key
-                ? "border-green-300/50 bg-green-400/10 text-green-100"
+                ? "border-orange-400 bg-orange-500/20 text-orange-100 shadow-[0_0_15px_rgba(255,107,0,0.2)]"
                 : "border-white/10 bg-white/[0.03] text-slate-400 hover:text-slate-200"
             }`}
           >
@@ -744,36 +795,96 @@ function AdminDatabaseBrowser({
                   {column.replaceAll("_", " ")}
                 </th>
               ))}
-              <th className="p-3">Action</th>
+              <th className="p-3">Actions</th>
             </tr>
           </thead>
           <tbody>
             {rows.length ? (
-              rows.map((row, index) => (
-                <tr key={String(row.id ?? index)} className="border-t border-white/10">
-                  {activeConfig.columns.map((column) => (
-                    <td key={column} className="max-w-[18rem] p-3 align-top text-xs text-slate-200">
-                      {formatAdminCell(row[column])}
-                    </td>
-                  ))}
-                  <td className="p-3 align-top">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onDelete(
-                          activeTab === "registrations"
-                            ? "registration_submissions"
-                            : (activeTab as "tournaments" | "announcements" | "matches" | "teams"),
-                          String(row.id),
-                        )
+              rows.map((row, index) => {
+                const rowId = String(row.id ?? index);
+                const isReg = activeTab === "registrations";
+                const paymentFile = String(row.payment_file_name ?? "");
+
+                return (
+                  <tr key={rowId} className="border-t border-white/10">
+                    {activeConfig.columns.map((column) => {
+                      const val = row[column];
+                      if (column === "payment_file_name" && paymentFile) {
+                        return (
+                          <td key={column} className="p-3 align-top">
+                            <button
+                              type="button"
+                              onClick={() => onOpenScreenshot(paymentFile)}
+                              className="inline-flex items-center gap-1.5 border border-green-400/50 bg-green-500/20 px-2.5 py-1 font-mono text-[0.65rem] font-bold uppercase tracking-wider text-green-100 hover:bg-green-500 hover:text-black transition"
+                            >
+                              <Eye className="h-3.5 w-3.5" /> View Receipt
+                            </button>
+                          </td>
+                        );
                       }
-                      className="flex items-center gap-1 border border-red-400/50 bg-red-500/10 px-2.5 py-1 font-mono text-[0.65rem] font-bold uppercase tracking-[0.14em] text-red-200 hover:bg-red-500 hover:text-black transition"
-                    >
-                      <Trash2 className="h-3 w-3" /> Delete
-                    </button>
-                  </td>
-                </tr>
-              ))
+                      if (column === "status" && isReg) {
+                        const statusVal = String(val ?? "SUBMITTED");
+                        return (
+                          <td key={column} className="p-3 align-top">
+                            <span
+                              className={`inline-block border px-2 py-0.5 font-mono text-[0.65rem] font-bold uppercase tracking-wider ${
+                                statusVal === "APPROVED"
+                                  ? "border-green-400 bg-green-500/20 text-green-200"
+                                  : statusVal === "REJECTED"
+                                  ? "border-red-400 bg-red-500/20 text-red-200"
+                                  : "border-orange-400 bg-orange-500/20 text-orange-200"
+                              }`}
+                            >
+                              {statusVal}
+                            </span>
+                          </td>
+                        );
+                      }
+                      return (
+                        <td key={column} className="max-w-[18rem] p-3 align-top text-xs text-slate-200 truncate">
+                          {formatAdminCell(val)}
+                        </td>
+                      );
+                    })}
+                    <td className="p-3 align-top flex items-center gap-1.5 flex-wrap">
+                      {isReg ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => onUpdateStatus(rowId, "APPROVED")}
+                            className="flex items-center gap-1 border border-green-400/50 bg-green-500/10 px-2 py-1 font-mono text-[0.62rem] font-bold uppercase tracking-[0.14em] text-green-200 hover:bg-green-500 hover:text-black transition"
+                            title="Approve & Confirm Slot"
+                          >
+                            <CheckCircle className="h-3 w-3" /> Approve
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onUpdateStatus(rowId, "REJECTED")}
+                            className="flex items-center gap-1 border border-red-400/50 bg-red-500/10 px-2 py-1 font-mono text-[0.62rem] font-bold uppercase tracking-[0.14em] text-red-200 hover:bg-red-500 hover:text-black transition"
+                            title="Reject Submission"
+                          >
+                            <XCircle className="h-3 w-3" /> Reject
+                          </button>
+                        </>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onDelete(
+                            activeTab === "registrations"
+                              ? "registration_submissions"
+                              : (activeTab as "tournaments" | "announcements" | "matches" | "teams"),
+                            rowId,
+                          )
+                        }
+                        className="flex items-center gap-1 border border-red-400/50 bg-red-500/10 px-2 py-1 font-mono text-[0.62rem] font-bold uppercase tracking-[0.14em] text-red-200 hover:bg-red-500 hover:text-black transition"
+                      >
+                        <Trash2 className="h-3 w-3" /> Delete
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
                 <td className="p-5 text-sm text-slate-400" colSpan={activeConfig.columns.length + 1}>
@@ -803,7 +914,9 @@ function formatAdminCell(value: unknown) {
   if (Array.isArray(value)) return value.join(", ");
   if (value === null || value === undefined || value === "") return "-";
   if (typeof value === "boolean") return value ? "Yes" : "No";
-  return String(value);
+  const str = String(value);
+  if (str.startsWith("data:image/")) return "[Image Screenshot Data]";
+  return str;
 }
 
 export function AdminPage() {
