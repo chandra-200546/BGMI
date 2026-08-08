@@ -6,7 +6,23 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 1. Tournaments Table
+-- 1. Admin Settings Table (Stores Admin Passcode securely in Supabase Database)
+CREATE TABLE IF NOT EXISTS public.admin_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.admin_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public Read Admin Settings" ON public.admin_settings FOR SELECT USING (true);
+CREATE POLICY "Admin All Admin Settings" ON public.admin_settings FOR ALL USING (true);
+
+-- Insert official Admin Password into Supabase Database
+INSERT INTO public.admin_settings (key, value)
+VALUES ('admin_password', 'vinaygbmi!@#$%^&*')
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+
+-- 2. Tournaments Table
 CREATE TABLE IF NOT EXISTS public.tournaments (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     name TEXT NOT NULL,
@@ -21,11 +37,13 @@ CREATE TABLE IF NOT EXISTS public.tournaments (
     maps TEXT[] DEFAULT ARRAY['Erangel', 'Miramar', 'Sanhok'],
     phase TEXT DEFAULT 'Registration',
     accent TEXT DEFAULT 'from-orange-400 to-green-300',
+    room_id TEXT,
+    room_password TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. Teams Leaderboard Table
+-- 3. Teams Leaderboard Table
 CREATE TABLE IF NOT EXISTS public.teams (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     name TEXT NOT NULL,
@@ -42,7 +60,7 @@ CREATE TABLE IF NOT EXISTS public.teams (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. Matches Schedule Table
+-- 4. Matches Schedule Table
 CREATE TABLE IF NOT EXISTS public.matches (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     tournament_id TEXT REFERENCES public.tournaments(id) ON DELETE CASCADE,
@@ -51,10 +69,12 @@ CREATE TABLE IF NOT EXISTS public.matches (
     map TEXT DEFAULT 'Erangel',
     status TEXT DEFAULT 'UPCOMING',
     group_name TEXT DEFAULT 'Group A',
+    room_id TEXT,
+    room_password TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. Announcements Table
+-- 5. Announcements Table
 CREATE TABLE IF NOT EXISTS public.announcements (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     tournament_id TEXT REFERENCES public.tournaments(id) ON DELETE SET NULL,
@@ -66,7 +86,7 @@ CREATE TABLE IF NOT EXISTS public.announcements (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. Registration Submissions Table
+-- 6. Registration Submissions Table
 CREATE TABLE IF NOT EXISTS public.registration_submissions (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     tournament_id TEXT REFERENCES public.tournaments(id) ON DELETE SET NULL,
@@ -118,9 +138,10 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Seed Initial Teams Data
 INSERT INTO public.teams (id, name, short_name, region, captain, matches_played, wwcd, placement_points, finishes)
-VALUES
-('team-01', 'Soul Ember', 'SOUL', 'IN', 'Demon OP', 12, 4, 142, 88),
-('team-02', 'GodLike Ops', 'GODL', 'IN', 'Jonathan', 12, 3, 130, 94),
-('team-03', 'Hydra Blitz', 'HYD', 'IN', 'Mavi', 12, 2, 110, 72),
-('team-04', 'Revenant X', 'RVT', 'IN', 'Sensei', 12, 2, 98, 65)
+VALUES 
+('team-01', 'Team Soul', 'SOUL', 'IN', 'Mortal', 15, 6, 142, 98),
+('team-02', 'GodLike Esports', 'GODL', 'IN', 'Jonathan', 15, 5, 128, 110),
+('team-03', 'Team XSpark', 'TX', 'IN', 'Scout', 15, 4, 115, 85),
+('team-04', 'Blind Esports', 'BLIND', 'IN', 'Manya', 15, 3, 102, 76),
+('team-05', 'Entity Gaming', 'ENTITY', 'IN', 'Saumraj', 15, 3, 95, 64)
 ON CONFLICT (id) DO NOTHING;

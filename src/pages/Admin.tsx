@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { LockKeyhole, RefreshCw, SlidersHorizontal, Trash2, Users, X } from "lucide-react";
+import { LockKeyhole, RefreshCw, ShieldCheck, SlidersHorizontal, Trash2, Users, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   formatUpdatedAt,
@@ -24,16 +24,23 @@ export function AdminPanelModal({
   open,
   onClose,
   onChanged,
+  inline = false,
 }: {
   data: PlatformData;
   open: boolean;
   onClose: () => void;
   onChanged: () => void;
+  inline?: boolean;
 }) {
-  const [adminKey, setAdminKey] = useState("admin");
+  const [adminKey, setAdminKey] = useState(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("nexbattles_admin_pass") || "vinaygbmi!@#$%^&*";
+    }
+    return "vinaygbmi!@#$%^&*";
+  });
   const [unlocked, setUnlocked] = useState(false);
   const [activeTask, setActiveTask] = useState<
-    "announcement" | "tournament" | "match" | "registrationStatus"
+    "tournament" | "announcement" | "match" | "registrationStatus" | "roomCredentials"
   >("tournament");
   const [activeDataTab, setActiveDataTab] = useState<AdminDataTab>("tournaments");
   const [snapshot, setSnapshot] = useState<AdminSnapshot | undefined>();
@@ -57,8 +64,12 @@ export function AdminPanelModal({
     matchMap: "Erangel",
     matchGroup: "Group A",
     matchStartsAt: "",
+    matchId: "",
+    teamId: "",
     registrationId: "",
     registrationStatus: "APPROVED",
+    roomId: "",
+    roomPassword: "",
   });
 
   useEffect(() => {
@@ -67,23 +78,36 @@ export function AdminPanelModal({
     }
   }, [data.tournaments, form.tournamentId]);
 
+  // Auto-attempt unlock if adminKey is already set
+  useEffect(() => {
+    if (open && adminKey && !unlocked) {
+      void unlockWithKey(adminKey);
+    }
+  }, [open]);
+
   function updateField(key: keyof typeof form, value: string | boolean) {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  async function unlock() {
+  async function unlockWithKey(keyToTry: string) {
     setBusy(true);
     setStatus("");
     try {
       const response = await fetch("/api/admin/auth", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ adminKey }),
+        body: JSON.stringify({ adminKey: keyToTry }),
       });
-      if (!response.ok) throw new Error("Wrong admin key. Use 'admin' or 'nexbattles2026'.");
+      if (!response.ok) {
+        const errorData = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(errorData.error ?? "Invalid admin password. Check your password.");
+      }
       setUnlocked(true);
-      setStatus("Admin command deck unlocked.");
-      await loadSnapshot();
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("nexbattles_admin_pass", keyToTry);
+      }
+      setStatus("Admin Command Deck unlocked successfully.");
+      await loadSnapshotWithKey(keyToTry);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Unable to unlock admin panel");
     } finally {
@@ -91,15 +115,23 @@ export function AdminPanelModal({
     }
   }
 
-  async function loadSnapshot() {
+  async function unlock() {
+    await unlockWithKey(adminKey);
+  }
+
+  async function loadSnapshotWithKey(keyToUse: string) {
     const response = await fetch("/api/admin/snapshot", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ adminKey }),
+      body: JSON.stringify({ adminKey: keyToUse }),
     });
     const payload = (await response.json()) as { data?: AdminSnapshot; error?: string };
     if (!response.ok || !payload.data) throw new Error(payload.error ?? "Unable to load database");
     setSnapshot(payload.data);
+  }
+
+  async function loadSnapshot() {
+    await loadSnapshotWithKey(adminKey);
   }
 
   async function runCommand() {
@@ -113,7 +145,7 @@ export function AdminPanelModal({
       });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? "Admin command failed");
-      setStatus(`${activeTask} command completed.`);
+      setStatus(`Success: ${activeTask} action executed.`);
       await loadSnapshot();
       onChanged();
     } catch (error) {
@@ -123,7 +155,7 @@ export function AdminPanelModal({
     }
   }
 
-  async function deleteItem(table: "tournaments" | "announcements" | "registration_submissions", id: string) {
+  async function deleteItem(table: "tournaments" | "announcements" | "registration_submissions" | "matches" | "teams", id: string) {
     if (!confirm(`Are you sure you want to delete this ${table} entry?`)) return;
     setBusy(true);
     setStatus("");
@@ -136,6 +168,12 @@ export function AdminPanelModal({
       } else if (table === "registration_submissions") {
         actionName = "deleteRegistration";
         payloadKey = "registrationId";
+      } else if (table === "matches") {
+        actionName = "deleteMatch";
+        payloadKey = "matchId";
+      } else if (table === "teams") {
+        actionName = "deleteTeam";
+        payloadKey = "teamId";
       }
 
       const response = await fetch("/api/admin/command", {
@@ -145,7 +183,7 @@ export function AdminPanelModal({
       });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? "Deletion failed");
-      setStatus(`Entry deleted successfully.`);
+      setStatus(`Entry deleted successfully from ${table}.`);
       await loadSnapshot();
       onChanged();
     } catch (error) {
@@ -163,23 +201,185 @@ export function AdminPanelModal({
   const adminCards = [
     {
       label: "Registration queue",
-      value: `${data.tournaments.reduce((sum, item) => sum + item.registered, 0)} squads`,
+      value: `${snapshot?.registrations?.length ?? data.tournaments.reduce((sum, item) => sum + item.registered, 0)} squads`,
       note: "Approve, waitlist, or reject captain submissions.",
       icon: Users,
     },
     {
       label: "Room controls",
-      value: `${data.schedules.length} matches`,
+      value: `${snapshot?.matches?.length ?? data.schedules.length} matches`,
       note: "Prepare room IDs, passwords, release windows, and check-ins.",
       icon: LockKeyhole,
     },
     {
       label: "Live ops",
-      value: `${pendingSignal} slots`,
+      value: `${pendingSignal} slots open`,
       note: "Monitor slot pressure, announcements, scoring, and disputes.",
       icon: SlidersHorizontal,
     },
   ];
+
+  const contentUI = (
+    <motion.div
+      initial={{ y: 20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      className="clip-panel hud-panel p-5 md:p-7"
+    >
+      <div className="flex flex-col gap-4 border-b border-white/10 pb-5 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.24em] text-orange-300">
+            Admin Panel
+          </p>
+          <h2 className="mt-2 font-display text-5xl font-bold uppercase leading-none text-white md:text-7xl">
+            Organizer Command Deck
+          </h2>
+        </div>
+        <div className="border border-green-300/25 bg-green-400/10 px-4 py-3 font-mono text-xs uppercase tracking-[0.18em] text-green-100 flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-green-400" />
+          {unlocked ? "Passcode Verified" : "Passcode Required"}
+        </div>
+      </div>
+
+      {!unlocked ? (
+        <div className="mt-6 grid gap-4 md:grid-cols-[1fr_auto]">
+          <label className="field-shell">
+            Supabase Admin Password
+            <input
+              type="password"
+              value={adminKey}
+              onChange={(event) => setAdminKey(event.target.value)}
+              placeholder="Enter official admin password"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={unlock}
+            disabled={busy}
+            className="self-end border border-orange-300/50 bg-orange-500/15 px-6 py-4 font-mono text-xs font-bold uppercase tracking-[0.2em] text-orange-100 disabled:opacity-50 hover:bg-orange-500 hover:text-black transition"
+          >
+            {busy ? "Authenticating..." : "Unlock Command Deck"}
+          </button>
+        </div>
+      ) : (
+        <div className="mt-6 grid gap-6 xl:grid-cols-[0.75fr_1.25fr]">
+          <div className="grid gap-3">
+            {adminCards.map((card) => {
+              const Icon = card.icon;
+              return (
+                <div key={card.label} className="border border-white/10 bg-black/45 p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-green-300">
+                        {card.label}
+                      </p>
+                      <p className="mt-1 font-display text-4xl font-bold uppercase text-white">
+                        {card.value}
+                      </p>
+                    </div>
+                    <Icon className="h-5 w-5 text-orange-300" />
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">{card.note}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          <div>
+            {/* Task Selector Tabs */}
+            <div className="mb-4 flex flex-wrap gap-2">
+              {[
+                { key: "tournament", label: "+ Challenge / Tournament" },
+                { key: "announcement", label: "+ Broadcast News" },
+                { key: "match", label: "+ Match Schedule" },
+                { key: "registrationStatus", label: "Registration Queue" },
+                { key: "roomCredentials", label: "Room Credentials" },
+              ].map((task) => (
+                <button
+                  key={task.key}
+                  type="button"
+                  onClick={() => setActiveTask(task.key as typeof activeTask)}
+                  className={`border px-3.5 py-2.5 font-mono text-[0.68rem] font-bold uppercase tracking-[0.16em] transition ${
+                    activeTask === task.key
+                      ? "border-orange-300/60 bg-orange-500/20 text-orange-100"
+                      : "border-white/10 bg-white/[0.03] text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  {task.label}
+                </button>
+              ))}
+            </div>
+
+            <AdminTaskFields
+              activeTask={activeTask}
+              form={form}
+              tournaments={data.tournaments}
+              schedules={data.schedules}
+              registrations={snapshot?.registrations ?? []}
+              updateField={updateField}
+            />
+
+            <button
+              type="button"
+              onClick={runCommand}
+              disabled={busy}
+              className="mt-5 w-full border border-green-300/40 bg-green-400/10 px-6 py-4 font-mono text-xs font-bold uppercase tracking-[0.2em] text-green-100 disabled:opacity-50 hover:bg-green-500 hover:text-black transition"
+            >
+              {busy ? "Executing..." : `Execute ${activeTask} Command`}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {unlocked ? (
+        <div className="mt-8 border-t border-white/10 pt-6">
+          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="font-mono text-xs uppercase tracking-[0.22em] text-orange-300">
+                Database Control Room
+              </p>
+              <p className="mt-1 text-sm text-slate-400">
+                Live Supabase tables viewer with instant record deletion.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setBusy(true);
+                loadSnapshot()
+                  .then(() => setStatus("Database snapshot refreshed."))
+                  .catch((error: unknown) =>
+                    setStatus(error instanceof Error ? error.message : "Refresh failed"),
+                  )
+                  .finally(() => setBusy(false));
+              }}
+              disabled={busy}
+              className="inline-flex items-center justify-center gap-2 border border-white/15 bg-white/5 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-white disabled:opacity-50 hover:border-orange-400"
+            >
+              <RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} />
+              Refresh Snapshot
+            </button>
+          </div>
+
+          <AdminDatabaseBrowser
+            snapshot={snapshot}
+            activeTab={activeDataTab}
+            setActiveTab={setActiveDataTab}
+            onDelete={deleteItem}
+          />
+        </div>
+      ) : null}
+
+      {status ? (
+        <p className="mt-5 border border-white/10 bg-black/45 p-3 font-mono text-xs uppercase tracking-[0.16em] text-orange-100">
+          {status}
+        </p>
+      ) : null}
+    </motion.div>
+  );
+
+  if (inline) {
+    return contentUI;
+  }
 
   return (
     <AnimatePresence>
@@ -201,161 +401,7 @@ export function AdminPanelModal({
                 <X className="h-5 w-5" />
               </button>
             </div>
-
-            <motion.div
-              initial={{ y: 34, opacity: 0, rotateX: 6 }}
-              animate={{ y: 0, opacity: 1, rotateX: 0 }}
-              className="clip-panel hud-panel p-5 md:p-7"
-            >
-              <div className="flex flex-col gap-4 border-b border-white/10 pb-5 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <p className="font-mono text-xs uppercase tracking-[0.24em] text-orange-300">
-                    Admin Panel
-                  </p>
-                  <h2 className="mt-2 font-display text-5xl font-bold uppercase leading-none text-white md:text-7xl">
-                    Organizer Command Deck
-                  </h2>
-                </div>
-                <div className="border border-green-300/25 bg-green-400/10 px-4 py-3 font-mono text-xs uppercase tracking-[0.18em] text-green-100">
-                  {unlocked ? "Credentials accepted" : "Credentials required"}
-                </div>
-              </div>
-
-              {!unlocked ? (
-                <div className="mt-6 grid gap-4 md:grid-cols-[1fr_auto]">
-                  <label className="field-shell">
-                    Admin Key / Password
-                    <input
-                      type="password"
-                      value={adminKey}
-                      onChange={(event) => setAdminKey(event.target.value)}
-                      placeholder="Enter 'admin' or 'nexbattles2026'"
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={unlock}
-                    disabled={busy}
-                    className="self-end border border-orange-300/50 bg-orange-500/15 px-6 py-4 font-mono text-xs font-bold uppercase tracking-[0.2em] text-orange-100 disabled:opacity-50"
-                  >
-                    {busy ? "Checking" : "Unlock Command Deck"}
-                  </button>
-                </div>
-              ) : (
-                <div className="mt-6 grid gap-6 xl:grid-cols-[0.75fr_1.25fr]">
-                  <div className="grid gap-3">
-                    {adminCards.map((card) => {
-                      const Icon = card.icon;
-                      return (
-                        <div key={card.label} className="border border-white/10 bg-black/45 p-4">
-                          <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-green-300">
-                                {card.label}
-                              </p>
-                              <p className="mt-1 font-display text-4xl font-bold uppercase text-white">
-                                {card.value}
-                              </p>
-                            </div>
-                            <Icon className="h-5 w-5 text-orange-300" />
-                          </div>
-                          <p className="mt-2 text-sm leading-6 text-slate-400">{card.note}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <div>
-                    <div className="mb-4 flex flex-wrap gap-2">
-                      {(["tournament", "announcement", "match", "registrationStatus"] as const).map(
-                        (task) => (
-                          <button
-                            key={task}
-                            type="button"
-                            onClick={() => setActiveTask(task)}
-                            className={`border px-4 py-3 font-mono text-[0.68rem] font-bold uppercase tracking-[0.18em] ${
-                              activeTask === task
-                                ? "border-orange-300/60 bg-orange-500/15 text-orange-100"
-                                : "border-white/10 bg-white/[0.03] text-slate-400"
-                            }`}
-                          >
-                            {task === "tournament"
-                              ? "+ Announce Challenge"
-                              : task === "announcement"
-                                ? "+ Global News"
-                                : task === "match"
-                                  ? "+ Match Schedule"
-                                  : "Registration Queue"}
-                          </button>
-                        ),
-                      )}
-                    </div>
-
-                    <AdminTaskFields
-                      activeTask={activeTask}
-                      form={form}
-                      tournaments={data.tournaments}
-                      registrations={snapshot?.registrations ?? []}
-                      updateField={updateField}
-                    />
-
-                    <button
-                      type="button"
-                      onClick={runCommand}
-                      disabled={busy}
-                      className="mt-5 w-full border border-green-300/40 bg-green-400/10 px-6 py-4 font-mono text-xs font-bold uppercase tracking-[0.2em] text-green-100 disabled:opacity-50 hover:bg-green-500 hover:text-black transition"
-                    >
-                      {busy ? "Executing..." : `Publish / Update ${activeTask}`}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {unlocked ? (
-                <div className="mt-8 border-t border-white/10 pt-6">
-                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <p className="font-mono text-xs uppercase tracking-[0.22em] text-orange-300">
-                        Database Control Room
-                      </p>
-                      <p className="mt-1 text-sm text-slate-400">
-                        Manage all tournaments, announcements, and registrations stored in Supabase.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBusy(true);
-                        loadSnapshot()
-                          .then(() => setStatus("Database snapshot refreshed."))
-                          .catch((error: unknown) =>
-                            setStatus(error instanceof Error ? error.message : "Refresh failed"),
-                          )
-                          .finally(() => setBusy(false));
-                      }}
-                      disabled={busy}
-                      className="inline-flex items-center justify-center gap-2 border border-white/15 bg-white/5 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-white disabled:opacity-50 hover:border-orange-400"
-                    >
-                      <RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} />
-                      Refresh Snapshot
-                    </button>
-                  </div>
-
-                  <AdminDatabaseBrowser
-                    snapshot={snapshot}
-                    activeTab={activeDataTab}
-                    setActiveTab={setActiveDataTab}
-                    onDelete={deleteItem}
-                  />
-                </div>
-              ) : null}
-
-              {status ? (
-                <p className="mt-5 border border-white/10 bg-black/45 p-3 font-mono text-xs uppercase tracking-[0.16em] text-orange-100">
-                  {status}
-                </p>
-              ) : null}
-            </motion.div>
+            {contentUI}
           </div>
         </motion.div>
       ) : null}
@@ -367,12 +413,14 @@ function AdminTaskFields({
   activeTask,
   form,
   tournaments,
+  schedules,
   registrations,
   updateField,
 }: {
-  activeTask: "announcement" | "tournament" | "match" | "registrationStatus";
+  activeTask: "tournament" | "announcement" | "match" | "registrationStatus" | "roomCredentials";
   form: Record<string, string | boolean>;
   tournaments: Tournament[];
+  schedules: Array<{ id: string; title: string }>;
   registrations: Array<Record<string, unknown>>;
   updateField: (key: keyof typeof form, value: string | boolean) => void;
 }) {
@@ -463,7 +511,7 @@ function AdminTaskFields({
           />
         </label>
         <label className="field-shell">
-          Max Team Slots
+          Maximum Slots / Squads
           <input
             type="text"
             value={String(form.maxTeams)}
@@ -472,7 +520,7 @@ function AdminTaskFields({
           />
         </label>
         <label className="field-shell">
-          Maps Rotation
+          Map Rotation
           <input
             type="text"
             value={String(form.maps)}
@@ -480,20 +528,51 @@ function AdminTaskFields({
             placeholder="Erangel, Miramar, Sanhok"
           />
         </label>
+      </div>
+    );
+  }
+
+  if (activeTask === "match") {
+    return (
+      <div className="grid gap-4 md:grid-cols-2">
         <label className="field-shell">
-          Start Date & Time
+          Match Title
           <input
-            type="datetime-local"
-            value={String(form.startsAt)}
-            onChange={(e) => updateField("startsAt", e.target.value)}
+            type="text"
+            value={String(form.matchName)}
+            onChange={(e) => updateField("matchName", e.target.value)}
+            placeholder="e.g. Lobby 1 - Group Stage"
           />
         </label>
         <label className="field-shell">
-          Registration Deadline
+          Tournament
+          <select
+            value={String(form.tournamentId)}
+            onChange={(e) => updateField("tournamentId", e.target.value)}
+          >
+            {tournaments.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field-shell">
+          Map
           <input
-            type="datetime-local"
-            value={String(form.registrationDeadline)}
-            onChange={(e) => updateField("registrationDeadline", e.target.value)}
+            type="text"
+            value={String(form.matchMap)}
+            onChange={(e) => updateField("matchMap", e.target.value)}
+            placeholder="Erangel"
+          />
+        </label>
+        <label className="field-shell">
+          Group
+          <input
+            type="text"
+            value={String(form.matchGroup)}
+            onChange={(e) => updateField("matchGroup", e.target.value)}
+            placeholder="Group A"
           />
         </label>
       </div>
@@ -507,12 +586,12 @@ function AdminTaskFields({
           Select Registration Submission
           <select
             value={String(form.registrationId)}
-            onChange={(event) => updateField("registrationId", event.target.value)}
+            onChange={(e) => updateField("registrationId", e.target.value)}
           >
-            <option value="">Select captain submission</option>
-            {registrations.map((item) => (
-              <option key={String(item.id)} value={String(item.id)}>
-                {String(item.team_name)} (Capt. {String(item.captain_name)}) - {String(item.status)}
+            <option value="">Select a registration submission</option>
+            {registrations.map((reg) => (
+              <option key={String(reg.id)} value={String(reg.id)}>
+                {String(reg.team_name ?? "Team")} - {String(reg.captain_name ?? "Captain")} ({String(reg.status ?? "SUBMITTED")})
               </option>
             ))}
           </select>
@@ -521,70 +600,99 @@ function AdminTaskFields({
           Update Verification Status
           <select
             value={String(form.registrationStatus)}
-            onChange={(event) => updateField("registrationStatus", event.target.value)}
+            onChange={(e) => updateField("registrationStatus", e.target.value)}
           >
-            <option value="APPROVED">APPROVED (Payment Verified & Slot Locked)</option>
+            <option value="APPROVED">APPROVED (Payment Verified & Slot Confirmed)</option>
             <option value="UNDER_REVIEW">UNDER REVIEW (Checking Screenshot)</option>
             <option value="WAITLISTED">WAITLISTED</option>
-            <option value="REJECTED">REJECTED</option>
+            <option value="REJECTED">REJECTED (Invalid Screenshot/UID)</option>
           </select>
         </label>
       </div>
     );
   }
 
-  return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <label className="field-shell col-span-2">
-        Target Tournament
-        <select
-          value={String(form.tournamentId)}
-          onChange={(event) => updateField("tournamentId", event.target.value)}
-        >
-          <option value="">Select tournament</option>
-          {tournaments.map((tournament) => (
-            <option key={tournament.id} value={tournament.id}>
-              {tournament.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="field-shell">
-        Match Title
-        <input
-          type="text"
-          value={String(form.matchName)}
-          onChange={(e) => updateField("matchName", e.target.value)}
-          placeholder="e.g. Group A Match 1"
-        />
-      </label>
-      <label className="field-shell">
-        Map Name
-        <input
-          type="text"
-          value={String(form.matchMap)}
-          onChange={(e) => updateField("matchMap", e.target.value)}
-        />
-      </label>
-      <label className="field-shell">
-        Group Name
-        <input
-          type="text"
-          value={String(form.matchGroup)}
-          onChange={(e) => updateField("matchGroup", e.target.value)}
-        />
-      </label>
-      <label className="field-shell">
-        Match Starts At
-        <input
-          type="datetime-local"
-          value={String(form.matchStartsAt)}
-          onChange={(e) => updateField("matchStartsAt", e.target.value)}
-        />
-      </label>
-    </div>
-  );
+  if (activeTask === "roomCredentials") {
+    return (
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="field-shell">
+          Tournament / Challenge
+          <select
+            value={String(form.tournamentId)}
+            onChange={(e) => updateField("tournamentId", e.target.value)}
+          >
+            <option value="">Select Tournament</option>
+            {tournaments.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field-shell">
+          Match Schedule (Optional)
+          <select
+            value={String(form.matchId)}
+            onChange={(e) => updateField("matchId", e.target.value)}
+          >
+            <option value="">All Matches in Tournament</option>
+            {schedules.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.title}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field-shell">
+          BGMI Room ID
+          <input
+            type="text"
+            value={String(form.roomId)}
+            onChange={(e) => updateField("roomId", e.target.value)}
+            placeholder="e.g. 8492041"
+          />
+        </label>
+        <label className="field-shell">
+          BGMI Room Password
+          <input
+            type="text"
+            value={String(form.roomPassword)}
+            onChange={(e) => updateField("roomPassword", e.target.value)}
+            placeholder="e.g. LORDS2026"
+          />
+        </label>
+      </div>
+    );
+  }
+
+  return null;
 }
+
+const tableConfigs: Record<
+  AdminDataTab,
+  { label: string; columns: string[] }
+> = {
+  tournaments: {
+    label: "Tournaments",
+    columns: ["id", "name", "mode", "status", "prize_pool", "entry_fee", "registered_teams", "max_teams", "starts_at"],
+  },
+  announcements: {
+    label: "Announcements",
+    columns: ["id", "title", "category", "pinned", "publish_at"],
+  },
+  registrations: {
+    label: "Squad Registrations",
+    columns: ["id", "team_name", "captain_name", "captain_email", "bgmi_uid", "status", "created_at"],
+  },
+  matches: {
+    label: "Match Schedules",
+    columns: ["id", "name", "map", "group_name", "status", "starts_at"],
+  },
+  teams: {
+    label: "Teams Leaderboard",
+    columns: ["id", "name", "short_name", "captain", "placement_points", "finishes", "wwcd"],
+  },
+};
 
 function AdminDatabaseBrowser({
   snapshot,
@@ -595,74 +703,23 @@ function AdminDatabaseBrowser({
   snapshot?: AdminSnapshot;
   activeTab: AdminDataTab;
   setActiveTab: (tab: AdminDataTab) => void;
-  onDelete: (table: "tournaments" | "announcements" | "registration_submissions", id: string) => void;
+  onDelete: (table: "tournaments" | "announcements" | "registration_submissions" | "matches" | "teams", id: string) => void;
 }) {
-  const tabs: Array<{ key: AdminDataTab; label: string; columns: string[] }> = [
-    {
-      key: "tournaments",
-      label: "Tournaments & Scrims",
-      columns: [
-        "id",
-        "name",
-        "mode",
-        "status",
-        "prize_pool",
-        "entry_fee",
-        "max_teams",
-        "registered_teams",
-        "starts_at",
-      ],
-    },
-    {
-      key: "announcements",
-      label: "Announcements",
-      columns: ["id", "category", "title", "body", "pinned", "publish_at"],
-    },
-    {
-      key: "registrations",
-      label: "Squad Registrations",
-      columns: [
-        "id",
-        "team_name",
-        "captain_name",
-        "captain_email",
-        "bgmi_uid",
-        "players",
-        "whatsapp",
-        "payment_file_name",
-        "status",
-      ],
-    },
-    {
-      key: "teams",
-      label: "Teams Leaderboard",
-      columns: [
-        "rank",
-        "name",
-        "short_name",
-        "region",
-        "captain",
-        "matches_played",
-        "wwcd",
-        "placement_points",
-        "finishes",
-        "total_points",
-      ],
-    },
-    {
-      key: "matches",
-      label: "Match Schedule",
-      columns: ["name", "group_name", "map", "status", "starts_at"],
-    },
-  ];
-
-  const activeConfig = tabs.find((tab) => tab.key === activeTab) ?? tabs[0];
-  const rows = snapshot?.[activeConfig.key] ?? [];
+  const activeConfig = tableConfigs[activeTab];
+  const rows = snapshot ? (snapshot[activeTab] as Array<Record<string, unknown>>) : [];
 
   return (
     <div>
       <div className="mb-4 flex flex-wrap gap-2">
-        {tabs.map((tab) => (
+        {(
+          [
+            { key: "tournaments", label: "Tournaments" },
+            { key: "registrations", label: "Registrations" },
+            { key: "matches", label: "Matches" },
+            { key: "announcements", label: "Announcements" },
+            { key: "teams", label: "Teams Leaderboard" },
+          ] as const
+        ).map((tab) => (
           <button
             key={tab.key}
             type="button"
@@ -670,10 +727,10 @@ function AdminDatabaseBrowser({
             className={`border px-3 py-2 font-mono text-[0.65rem] font-bold uppercase tracking-[0.16em] ${
               activeTab === tab.key
                 ? "border-green-300/50 bg-green-400/10 text-green-100"
-                : "border-white/10 bg-white/[0.03] text-slate-400"
+                : "border-white/10 bg-white/[0.03] text-slate-400 hover:text-slate-200"
             }`}
           >
-            {tab.label} {snapshot ? `(${snapshot[tab.key].length})` : ""}
+            {tab.label} {snapshot ? `(${snapshot[tab.key]?.length ?? 0})` : ""}
           </button>
         ))}
       </div>
@@ -687,9 +744,7 @@ function AdminDatabaseBrowser({
                   {column.replaceAll("_", " ")}
                 </th>
               ))}
-              {activeTab === "tournaments" || activeTab === "announcements" || activeTab === "registrations" ? (
-                <th className="p-3">Action</th>
-              ) : null}
+              <th className="p-3">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -701,24 +756,22 @@ function AdminDatabaseBrowser({
                       {formatAdminCell(row[column])}
                     </td>
                   ))}
-                  {activeTab === "tournaments" || activeTab === "announcements" || activeTab === "registrations" ? (
-                    <td className="p-3 align-top">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          onDelete(
-                            activeTab === "registrations"
-                              ? "registration_submissions"
-                              : (activeTab as "tournaments" | "announcements"),
-                            String(row.id),
-                          )
-                        }
-                        className="flex items-center gap-1 border border-red-400/50 bg-red-500/10 px-2.5 py-1 font-mono text-[0.65rem] font-bold uppercase tracking-[0.14em] text-red-200 hover:bg-red-500 hover:text-black transition"
-                      >
-                        <Trash2 className="h-3 w-3" /> Delete
-                      </button>
-                    </td>
-                  ) : null}
+                  <td className="p-3 align-top">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onDelete(
+                          activeTab === "registrations"
+                            ? "registration_submissions"
+                            : (activeTab as "tournaments" | "announcements" | "matches" | "teams"),
+                          String(row.id),
+                        )
+                      }
+                      className="flex items-center gap-1 border border-red-400/50 bg-red-500/10 px-2.5 py-1 font-mono text-[0.65rem] font-bold uppercase tracking-[0.14em] text-red-200 hover:bg-red-500 hover:text-black transition"
+                    >
+                      <Trash2 className="h-3 w-3" /> Delete
+                    </button>
+                  </td>
                 </tr>
               ))
             ) : (
@@ -757,13 +810,14 @@ export function AdminPage() {
   const { data, refetch } = usePlatformData();
 
   return (
-    <div className="pt-24 pb-16 px-4 lg:px-6">
+    <div className="pt-24 pb-16 px-4 lg:px-6 min-h-screen">
       <div className="mx-auto max-w-6xl">
         <AdminPanelModal
           data={data}
           open={true}
           onClose={() => {}}
           onChanged={() => void refetch()}
+          inline={true}
         />
       </div>
     </div>

@@ -128,8 +128,9 @@ async function handleAdminApi(request: Request): Promise<Response | undefined> {
   try {
     const payload = await request.json();
     if (url.pathname === "/api/admin/auth") {
-      if (!validateAdminKey((payload as { adminKey?: unknown }).adminKey)) {
-        return jsonResponse({ error: "Invalid admin key" }, { status: 401 });
+      const isValid = await validateAdminKey((payload as { adminKey?: unknown }).adminKey);
+      if (!isValid) {
+        return jsonResponse({ error: "Invalid admin password. Please try again." }, { status: 401 });
       }
       return jsonResponse({ data: { ok: true } });
     }
@@ -163,19 +164,19 @@ function isH3SwallowedErrorBody(body: string): boolean {
 }
 
 export default {
-  async fetch(request: Request, env: unknown, ctx: unknown) {
+  async fetch(request: Request, env: unknown, ctx: unknown): Promise<Response> {
+    const publicApiResponse = await handlePublicApi(request);
+    if (publicApiResponse) return publicApiResponse;
+
+    const adminApiResponse = await handleAdminApi(request);
+    if (adminApiResponse) return adminApiResponse;
+
     try {
-      const adminResponse = await handleAdminApi(request);
-      if (adminResponse) return adminResponse;
-
-      const apiResponse = await handlePublicApi(request);
-      if (apiResponse) return apiResponse;
-
-      const handler = await getServerEntry();
-      const response = await handler.fetch(request, env, ctx);
+      const serverEntry = await getServerEntry();
+      const response = await serverEntry.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
     } catch (error) {
-      console.error(error);
+      console.error(consumeLastCapturedError() ?? error);
       return new Response(renderErrorPage(), {
         status: 500,
         headers: { "content-type": "text/html; charset=utf-8" },
