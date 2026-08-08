@@ -1,34 +1,59 @@
 import { motion } from "framer-motion";
 import { ArrowDown, ArrowUp, Crown, Flame, Search, Skull, Trophy, Swords, CalendarDays } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { Section, usePlatformData } from "../lib/shared-ui";
 import { totalPoints, type Team } from "../lib/platform-types";
 
-const battlesList = [
-  { id: "all", name: "All Battles (Cumulative)", icon: Trophy },
-  { id: "weekend-war", name: "Weekend War Championship (Season 4)", icon: Crown },
-  { id: "daily-slot-1", name: "Daily Grind - Slot 1 (02:00 PM)", icon: Flame },
-  { id: "daily-slot-2", name: "Daily Grind - Slot 2 (05:00 PM)", icon: Flame },
-  { id: "daily-slot-3", name: "Daily Grind - Slot 3 (08:00 PM)", icon: Flame },
-  { id: "daily-slot-4", name: "Daily Grind - Slot 4 (10:30 PM)", icon: Flame },
-  { id: "elite-series", name: "Elite Series Qualifiers", icon: Swords },
-];
-
-const mvpPlayers = [
-  { name: "JONATHAN", team: "GodLike Ops", frags: 34, damage: "4,890 HP", matches: 6, avatar: "👑" },
-  { name: "GOBBLIN", team: "Soul Ember", frags: 29, damage: "4,120 HP", matches: 6, avatar: "⚡" },
-  { name: "MAVI", team: "Hydra Blitz", frags: 27, damage: "3,950 HP", matches: 6, avatar: "🔥" },
-  { name: "SPOWER", team: "Revenant X", frags: 25, damage: "3,810 HP", matches: 6, avatar: "🎯" },
-];
+function LeaderboardRow({ team, rankOverride }: { team: Team; rankOverride?: number }) {
+  const displayRank = rankOverride ?? team.rank;
+  const up = (team.recentForm && team.recentForm[0] === "W") || displayRank <= 3;
+  return (
+    <motion.tr
+      whileHover={{ backgroundColor: "rgba(255,107,0,0.1)" }}
+      className="border-t border-white/10"
+    >
+      <td className="p-4 font-display text-3xl font-bold text-orange-300">#{displayRank}</td>
+      <td className="p-4">
+        <p className="font-bold text-white text-base">{team.name}</p>
+        <p className="font-mono text-xs uppercase tracking-[0.16em] text-slate-400">
+          {team.short} / Capt. {team.captain}
+        </p>
+      </td>
+      <td className="p-4 text-slate-300 font-mono text-xs">{team.region}</td>
+      <td className="p-4 text-white font-bold">{team.wwcd}</td>
+      <td className="p-4 text-white font-bold">{team.finishes}</td>
+      <td className="p-4 font-display text-3xl font-bold text-white">{totalPoints(team)}</td>
+      <td className="p-4">
+        <span
+          className={`inline-flex items-center gap-1 font-mono text-xs uppercase tracking-[0.18em] ${
+            up ? "text-green-300" : "text-red-300"
+          }`}
+        >
+          {up ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+          {up ? "rising" : "under fire"}
+        </span>
+      </td>
+    </motion.tr>
+  );
+}
 
 export function WeeklyPointsPage() {
   const { data } = usePlatformData();
   const [selectedBattle, setSelectedBattle] = useState("all");
   const [query, setQuery] = useState("");
 
+  const battlesList = useMemo(() => {
+    const list = [{ id: "all", name: "All Battles (Cumulative)", icon: Trophy }];
+    data.tournaments.forEach((t) => {
+      list.push({ id: t.id, name: t.name, icon: Crown });
+    });
+    return list;
+  }, [data.tournaments]);
+
   const currentBattle = useMemo(() => {
     return battlesList.find((b) => b.id === selectedBattle) ?? battlesList[0];
-  }, [selectedBattle]);
+  }, [selectedBattle, battlesList]);
 
   const teams = useMemo(() => {
     let list = [...data.teams];
@@ -55,6 +80,12 @@ export function WeeklyPointsPage() {
       )
       .sort((a, b) => totalPoints(b) - totalPoints(a));
   }, [data.teams, query, selectedBattle]);
+
+  const topFraggers = useMemo(() => {
+    return [...data.teams]
+      .sort((a, b) => b.finishes - a.finishes)
+      .slice(0, 4);
+  }, [data.teams]);
 
   return (
     <div className="pt-24 pb-16">
@@ -87,68 +118,61 @@ export function WeeklyPointsPage() {
         </div>
 
         {/* Top Weekly MVPs */}
-        <div className="mt-10">
-          <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.24em] text-orange-300">
-            <Trophy className="h-4 w-4" /> Dedicated MVP Frag Slayers — {currentBattle.name}
-          </div>
-          <div className="mt-4 grid gap-4 md:grid-cols-4">
-            {mvpPlayers.map((mvp, index) => (
-              <motion.div
-                key={mvp.name}
-                whileHover={{ y: -6 }}
-                className="clip-panel hud-panel border border-orange-500/30 p-5 relative overflow-hidden"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs uppercase tracking-[0.2em] text-green-300">
-                    MVP Rank #{index + 1}
-                  </span>
-                  <span className="text-xl">{mvp.avatar}</span>
-                </div>
-                <h4 className="mt-4 font-display text-4xl font-bold uppercase text-white">
-                  {mvp.name}
-                </h4>
-                <p className="font-mono text-xs uppercase tracking-[0.16em] text-slate-400">
-                  {mvp.team}
-                </p>
-                <div className="mt-4 border-t border-white/10 pt-3 flex items-center justify-between font-mono text-xs">
-                  <span className="text-orange-300 font-bold">{mvp.frags} Finishes</span>
-                  <span className="text-slate-400">{mvp.damage}</span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-
-        {/* Points Table */}
-        <div className="mt-12 clip-panel hud-panel overflow-hidden">
-          <div className="flex flex-col gap-3 border-b border-white/10 p-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <span className="font-mono text-[0.65rem] uppercase tracking-[0.22em] text-green-300">
-                Battle Standings
-              </span>
-              <h3 className="font-display text-2xl font-bold uppercase text-white">
-                {currentBattle.name}
-              </h3>
+        {topFraggers.length ? (
+          <div className="mt-10">
+            <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.24em] text-orange-300">
+              <Trophy className="h-4 w-4" /> Dedicated MVP Frag Slayers — {currentBattle.name}
             </div>
-            <label className="flex items-center gap-2 border border-white/10 bg-black/40 px-3.5 py-2">
-              <Search className="h-4 w-4 text-orange-300" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search weekly squad"
-                className="bg-transparent font-mono text-xs uppercase tracking-[0.12em] text-white outline-none"
-              />
-            </label>
-          </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-4">
+              {topFraggers.map((mvp, index) => (
+                <motion.div
+                  key={mvp.name}
+                  whileHover={{ y: -6 }}
+                  className="clip-panel hud-panel border border-orange-500/30 p-5 relative overflow-hidden"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-display text-4xl">👑</span>
+                    <span className="border border-orange-400/40 bg-orange-500/10 px-2 py-0.5 font-mono text-[0.62rem] font-bold uppercase tracking-[0.18em] text-orange-200">
+                      RANK #{index + 1}
+                    </span>
+                  </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left">
-              <thead className="font-mono text-[0.65rem] uppercase tracking-[0.22em] text-slate-500">
+                  <h4 className="mt-4 font-display text-3xl font-bold uppercase text-white">
+                    {mvp.captain}
+                  </h4>
+                  <p className="font-mono text-xs uppercase tracking-[0.16em] text-green-300">
+                    {mvp.name} ({mvp.short})
+                  </p>
+
+                  <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-3 font-mono text-xs">
+                    <div>
+                      <span className="block text-[0.62rem] text-slate-400">FINISHES</span>
+                      <span className="font-display text-2xl font-bold text-orange-400">
+                        {mvp.finishes} Kills
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-[0.62rem] text-slate-400 font-right text-right">WWCD</span>
+                      <span className="font-display text-2xl font-bold text-white text-right block">
+                        {mvp.wwcd} Wins
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {/* Main Leaderboard Table */}
+        {teams.length ? (
+          <div className="mt-10 clip-panel hud-panel overflow-x-auto p-2">
+            <table className="w-full text-left min-w-[700px]">
+              <thead className="border-b border-white/10 font-mono text-xs uppercase tracking-[0.2em] text-slate-400">
                 <tr>
                   <th className="p-4">Rank</th>
-                  <th className="p-4">Squad</th>
+                  <th className="p-4">Squad Name</th>
                   <th className="p-4">Region</th>
-                  <th className="p-4">Matches</th>
                   <th className="p-4">WWCD</th>
                   <th className="p-4">Finishes</th>
                   <th className="p-4">Total PTS</th>
@@ -156,43 +180,25 @@ export function WeeklyPointsPage() {
                 </tr>
               </thead>
               <tbody>
-                {teams.map((team, idx) => {
-                  const up = team.form[0] === "W" || idx < 3;
-                  return (
-                    <tr key={team.name} className="border-t border-white/10 hover:bg-orange-500/10">
-                      <td className="p-4 font-display text-3xl font-bold text-orange-300">
-                        #{idx + 1}
-                      </td>
-                      <td className="p-4">
-                        <p className="font-bold text-white text-base">{team.name}</p>
-                        <p className="font-mono text-xs uppercase text-slate-400">
-                          {team.short} / Capt. {team.captain}
-                        </p>
-                      </td>
-                      <td className="p-4 text-slate-300 font-mono text-xs">{team.region}</td>
-                      <td className="p-4 text-white font-bold">6</td>
-                      <td className="p-4 text-white font-bold">{team.wwcd}</td>
-                      <td className="p-4 text-white font-bold">{team.finishes}</td>
-                      <td className="p-4 font-display text-3xl font-bold text-white">
-                        {totalPoints(team)}
-                      </td>
-                      <td className="p-4">
-                        <span
-                          className={`inline-flex items-center gap-1 font-mono text-xs uppercase tracking-[0.18em] ${
-                            up ? "text-green-300" : "text-red-300"
-                          }`}
-                        >
-                          {up ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
-                          {up ? "dominant" : "pressure"}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {teams.map((team, index) => (
+                  <LeaderboardRow key={team.name} team={team} rankOverride={index + 1} />
+                ))}
               </tbody>
             </table>
           </div>
-        </div>
+        ) : (
+          <div className="mt-10 border border-white/10 bg-black/60 p-10 text-center font-mono text-xs uppercase tracking-[0.18em] text-slate-400">
+            <Trophy className="mx-auto h-10 w-10 text-orange-400/60 mb-3" />
+            <p className="text-sm font-bold text-white">No Weekly Standings or MVP Stats Recorded Yet</p>
+            <p className="mt-2 text-slate-400">Scores and top frag slayers will populate live during match gameplay.</p>
+            <Link
+              to="/admin"
+              className="mt-6 inline-block border border-orange-400/60 bg-orange-500/20 px-6 py-3 text-orange-200 hover:bg-orange-500 hover:text-black transition font-bold"
+            >
+              Open Admin Panel
+            </Link>
+          </div>
+        )}
       </Section>
     </div>
   );
