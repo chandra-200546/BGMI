@@ -10,15 +10,28 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as ContactRouteImport } from './routes/contact'
+import { Route as DailyGrindRouteImport } from './routes/daily-grind'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
+import { Route as PointsTableRouteImport } from './routes/points-table'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ScheduleRouteImport } from './routes/schedule'
 import { Route as TeamsRouteImport } from './routes/teams'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as WeekendWarRouteImport } from './routes/weekend-war'
+import { Route as WeeklyPointsRouteImport } from './routes/weekly-points'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -26,9 +39,29 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DailyGrindRoute = DailyGrindRouteImport.update({
+  id: '/daily-grind',
+  path: '/daily-grind',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LeaderboardRoute = LeaderboardRouteImport.update({
   id: '/leaderboard',
   path: '/leaderboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PointsTableRoute = PointsTableRouteImport.update({
+  id: '/points-table',
+  path: '/points-table',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegisterRoute = RegisterRouteImport.update({
@@ -46,55 +79,137 @@ const TeamsRoute = TeamsRouteImport.update({
   path: '/teams',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WeekendWarRoute = WeekendWarRouteImport.update({
+  id: '/weekend-war',
+  path: '/weekend-war',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WeeklyPointsRoute = WeeklyPointsRouteImport.update({
+  id: '/weekly-points',
+  path: '/weekly-points',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
+  '/contact': typeof ContactRoute
+  '/daily-grind': typeof DailyGrindRoute
   '/leaderboard': typeof LeaderboardRoute
+  '/points-table': typeof PointsTableRoute
+  '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
   '/schedule': typeof ScheduleRoute
   '/teams': typeof TeamsRoute
+  '/terms': typeof TermsRoute
+  '/weekend-war': typeof WeekendWarRoute
+  '/weekly-points': typeof WeeklyPointsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
+  '/contact': typeof ContactRoute
+  '/daily-grind': typeof DailyGrindRoute
   '/leaderboard': typeof LeaderboardRoute
+  '/points-table': typeof PointsTableRoute
+  '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
   '/schedule': typeof ScheduleRoute
   '/teams': typeof TeamsRoute
+  '/terms': typeof TermsRoute
+  '/weekend-war': typeof WeekendWarRoute
+  '/weekly-points': typeof WeeklyPointsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
+  '/contact': typeof ContactRoute
+  '/daily-grind': typeof DailyGrindRoute
   '/leaderboard': typeof LeaderboardRoute
+  '/points-table': typeof PointsTableRoute
+  '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
   '/schedule': typeof ScheduleRoute
   '/teams': typeof TeamsRoute
+  '/terms': typeof TermsRoute
+  '/weekend-war': typeof WeekendWarRoute
+  '/weekly-points': typeof WeeklyPointsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/admin' | '/leaderboard' | '/register' | '/schedule' | '/teams'
-  fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/leaderboard' | '/register' | '/schedule' | '/teams'
-  id:
-    | '__root__'
     | '/'
+    | '/about'
     | '/admin'
+    | '/contact'
+    | '/daily-grind'
     | '/leaderboard'
+    | '/points-table'
+    | '/privacy'
     | '/register'
     | '/schedule'
     | '/teams'
+    | '/terms'
+    | '/weekend-war'
+    | '/weekly-points'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/'
+    | '/about'
+    | '/admin'
+    | '/contact'
+    | '/daily-grind'
+    | '/leaderboard'
+    | '/points-table'
+    | '/privacy'
+    | '/register'
+    | '/schedule'
+    | '/teams'
+    | '/terms'
+    | '/weekend-war'
+    | '/weekly-points'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/admin'
+    | '/contact'
+    | '/daily-grind'
+    | '/leaderboard'
+    | '/points-table'
+    | '/privacy'
+    | '/register'
+    | '/schedule'
+    | '/teams'
+    | '/terms'
+    | '/weekend-war'
+    | '/weekly-points'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
   AdminRoute: typeof AdminRoute
+  ContactRoute: typeof ContactRoute
+  DailyGrindRoute: typeof DailyGrindRoute
   LeaderboardRoute: typeof LeaderboardRoute
+  PointsTableRoute: typeof PointsTableRoute
+  PrivacyRoute: typeof PrivacyRoute
   RegisterRoute: typeof RegisterRoute
   ScheduleRoute: typeof ScheduleRoute
   TeamsRoute: typeof TeamsRoute
+  TermsRoute: typeof TermsRoute
+  WeekendWarRoute: typeof WeekendWarRoute
+  WeeklyPointsRoute: typeof WeeklyPointsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -106,6 +221,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -113,11 +235,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/daily-grind': {
+      id: '/daily-grind'
+      path: '/daily-grind'
+      fullPath: '/daily-grind'
+      preLoaderRoute: typeof DailyGrindRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/leaderboard': {
       id: '/leaderboard'
       path: '/leaderboard'
       fullPath: '/leaderboard'
       preLoaderRoute: typeof LeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/points-table': {
+      id: '/points-table'
+      path: '/points-table'
+      fullPath: '/points-table'
+      preLoaderRoute: typeof PointsTableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/register': {
@@ -141,16 +291,45 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeamsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/weekend-war': {
+      id: '/weekend-war'
+      path: '/weekend-war'
+      fullPath: '/weekend-war'
+      preLoaderRoute: typeof WeekendWarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/weekly-points': {
+      id: '/weekly-points'
+      path: '/weekly-points'
+      fullPath: '/weekly-points'
+      preLoaderRoute: typeof WeeklyPointsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
   AdminRoute: AdminRoute,
+  ContactRoute: ContactRoute,
+  DailyGrindRoute: DailyGrindRoute,
   LeaderboardRoute: LeaderboardRoute,
+  PointsTableRoute: PointsTableRoute,
+  PrivacyRoute: PrivacyRoute,
   RegisterRoute: RegisterRoute,
   ScheduleRoute: ScheduleRoute,
   TeamsRoute: TeamsRoute,
+  TermsRoute: TermsRoute,
+  WeekendWarRoute: WeekendWarRoute,
+  WeeklyPointsRoute: WeeklyPointsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
