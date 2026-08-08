@@ -1,10 +1,9 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle2, ChevronRight, ImagePlus, Lock, ShieldCheck, Trophy, Upload, User } from "lucide-react";
+import { CheckCircle2, ChevronRight, ImagePlus, ShieldCheck, Trophy, Upload, User } from "lucide-react";
 import { useEffect, useState, type ChangeEvent, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth-context";
 import { MagneticButton, Section, usePlatformData, useSoundDesign } from "../lib/shared-ui";
-import { AuthModal } from "../components/AuthModal";
 import type { Tournament } from "../lib/platform-types";
 
 type RegistrationPayload = {
@@ -29,12 +28,11 @@ export function RegisterPage() {
   const navigate = useNavigate();
 
   const tournaments = data.tournaments;
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-
   const [step, setStep] = useState(0);
   const [shake, setShake] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+
   const [form, setForm] = useState<RegistrationPayload>({
     tournamentId: tournaments[0]?.id ?? "",
     teamName: user?.teamName ?? "",
@@ -48,17 +46,14 @@ export function RegisterPage() {
     paymentFileName: "",
   });
 
-  // Prompt auth modal if unauthenticated when arriving at register
   useEffect(() => {
-    if (!user) {
-      setAuthModalOpen(true);
-    } else {
+    if (user) {
       setForm((prev) => ({
         ...prev,
-        captainName: user.name || prev.captainName,
-        captainEmail: user.email || prev.captainEmail,
-        bgmiUid: user.bgmiUid || prev.bgmiUid,
-        teamName: user.teamName || prev.teamName,
+        captainName: prev.captainName || user.name || "",
+        captainEmail: prev.captainEmail || user.email || "",
+        bgmiUid: prev.bgmiUid || user.bgmiUid || "",
+        teamName: prev.teamName || user.teamName || "",
       }));
     }
   }, [user]);
@@ -93,11 +88,6 @@ export function RegisterPage() {
   }
 
   async function submit() {
-    if (!user) {
-      setAuthModalOpen(true);
-      return;
-    }
-
     if (!isStepValid()) {
       failValidation();
       return;
@@ -107,10 +97,10 @@ export function RegisterPage() {
     try {
       const selectedTournament = tournaments.find((t) => t.id === form.tournamentId);
 
-      // Record registration in user context & localStorage for /dashboard
+      // Record in user context if logged in or default
       addChallenge({
         tournamentId: form.tournamentId,
-        tournamentName: selectedTournament?.name ?? "BGMI Elite Tournament",
+        tournamentName: selectedTournament?.name ?? "BGMI Scrim Lobby",
         teamName: form.teamName,
         captainName: form.captainName,
         captainEmail: form.captainEmail,
@@ -123,7 +113,7 @@ export function RegisterPage() {
         roomDetails: { releaseAt: "15 mins before drop" },
       });
 
-      // API Submission
+      // Public registration insert
       await fetch("/api/public/register", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -140,11 +130,6 @@ export function RegisterPage() {
   }
 
   function next() {
-    if (!user) {
-      setAuthModalOpen(true);
-      return;
-    }
-
     if (!isStepValid()) {
       failValidation();
       return;
@@ -153,36 +138,13 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="pt-20">
-      <Section id="register" eyebrow="Team registration" title="Lock your squad slot.">
-        {/* Unauthenticated Banner prompt */}
-        {!user ? (
-          <div className="mb-8 flex flex-col gap-4 border border-orange-500/40 bg-orange-500/10 p-6 backdrop-blur-md md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-3">
-              <Lock className="h-6 w-6 text-orange-400" />
-              <div>
-                <h4 className="font-display text-2xl font-bold uppercase text-white">
-                  Login Required to Register
-                </h4>
-                <p className="font-mono text-xs text-slate-300">
-                  You must be logged in with Gmail to submit squad details, confirm slot payment, and access your matches in the Player Dashboard.
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setAuthModalOpen(true)}
-              className="border border-orange-400 bg-orange-500/20 px-6 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-orange-100 transition hover:bg-orange-500 hover:text-black"
-            >
-              Login with Gmail
-            </button>
-          </div>
-        ) : null}
-
+    <div className="pt-24 pb-16">
+      <Section id="register" eyebrow="Team registration pipeline" title="Lock your squad slot.">
         <div data-weapon-reload className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
+          {/* Progress Sidebar */}
           <div data-gsap-reveal className="clip-panel hud-panel p-6">
             <p className="font-mono text-xs uppercase tracking-[0.22em] text-green-300">
-              Registration Progress
+              Registration Pipeline
             </p>
             <div className="mt-4 h-5 border border-orange-300/30 bg-black/60 p-1">
               <motion.div className="health-fill h-full" animate={{ width: `${progress}%` }} />
@@ -210,6 +172,7 @@ export function RegisterPage() {
             </div>
           </div>
 
+          {/* Step Container */}
           <motion.div
             data-gsap-reveal
             className={`clip-panel hud-panel p-6 ${shake ? "shake-error" : ""}`}
@@ -249,7 +212,8 @@ export function RegisterPage() {
                   sound="reload"
                   className={submitting ? "opacity-70" : ""}
                 >
-                  {submitting ? "Confirming Slot" : "Pay & Confirm Slot"} <Upload className="h-5 w-5" />
+                  {submitting ? "Confirming Slot" : "Pay & Lock Squad Slot"}{" "}
+                  <Upload className="h-5 w-5" />
                 </MagneticButton>
               ) : (
                 <MagneticButton onClick={next} playSound={sound.play} sound="reload">
@@ -280,28 +244,34 @@ export function RegisterPage() {
                   Slot Locked!
                 </h3>
                 <p className="mt-3 font-mono text-xs leading-relaxed text-slate-300">
-                  Your squad slot has been confirmed and registered under your player profile. Room credentials and match updates will be accessible in your Player Dashboard.
+                  Your squad registration and slot payment screenshot have been recorded. You can view your match status and room credentials in your Player Dashboard.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSuccess(false);
-                    navigate("/dashboard");
-                  }}
-                  className="mt-6 border border-green-300/40 bg-green-400/10 px-6 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-green-100 transition hover:bg-green-500 hover:text-black"
-                >
-                  Go to My Dashboard
-                </button>
+                <div className="mt-6 flex flex-wrap justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSuccess(false);
+                      navigate("/dashboard");
+                    }}
+                    className="border border-green-300/40 bg-green-400/10 px-6 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-green-100 transition hover:bg-green-500 hover:text-black"
+                  >
+                    Go to Dashboard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSuccess(false);
+                      setStep(0);
+                    }}
+                    className="border border-white/20 bg-white/5 px-6 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-white hover:border-orange-400"
+                  >
+                    Register Another Squad
+                  </button>
+                </div>
               </motion.div>
             </motion.div>
           ) : null}
         </AnimatePresence>
-
-        <AuthModal
-          open={authModalOpen}
-          onClose={() => setAuthModalOpen(false)}
-          customMessage="Login required to register your squad & lock your slot"
-        />
       </Section>
     </div>
   );
@@ -326,12 +296,12 @@ function RegistrationStep({
     return (
       <FormGrid title="Squad identity">
         <label className="field-shell">
-          Tournament / Scrim
+          Select Tournament / Scrim
           <select
             value={form.tournamentId}
             onChange={(event) => setField("tournamentId", event.target.value)}
           >
-            <option value="">Select live tournament</option>
+            <option value="">Select tournament</option>
             {tournaments.map((tournament) => (
               <option key={tournament.id} value={tournament.id}>
                 {tournament.name} ({tournament.fee ?? "₹100"})
@@ -378,11 +348,11 @@ function RegistrationStep({
 
   if (step === 2) {
     return (
-      <FormGrid title="Four player slots">
+      <FormGrid title="Four player roster">
         {form.players.map((player, index) => (
           <Field
             key={index}
-            label={`Player ${index + 1} IGN + UID`}
+            label={`Player ${index + 1} IGN + BGMI UID`}
             value={player}
             onChange={(value) =>
               setForm((current) => ({
@@ -416,10 +386,10 @@ function RegistrationStep({
   }
 
   return (
-    <FormGrid title="Slot Payment & Confirmation">
+    <FormGrid title="Slot Payment & Proof Upload">
       <div className="border border-orange-400/40 bg-orange-500/10 p-4 font-mono text-xs text-orange-100">
-        <span className="font-bold uppercase block text-orange-300">Payment to Lock Slot</span>
-        Transfer entry fee via UPI / GPay / PhonePe to <span className="font-bold text-white">nexbattles@upi</span> or upload screenshot receipt below.
+        <span className="font-bold uppercase block text-orange-300">UPI Slot Payment</span>
+        Transfer entry fee to UPI ID <span className="font-bold text-white">7996488242@upi</span> or <span className="font-bold text-white">nexbattles@upi</span>, then upload your transaction screenshot below.
       </div>
       <FileField
         label="Payment screenshot receipt upload"
@@ -433,7 +403,7 @@ function RegistrationStep({
 function FormGrid({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div>
-      <h3 className="font-display text-5xl font-bold uppercase text-white">{title}</h3>
+      <h3 className="font-display text-4xl font-bold uppercase text-white">{title}</h3>
       <div className="mt-6 grid gap-4">{children}</div>
     </div>
   );
@@ -476,7 +446,7 @@ function FileField({
     <label className="field-shell">
       {label}
       <span className="flex items-center justify-between gap-3 border border-white/10 bg-black/55 px-4 py-3 text-slate-300">
-        <span className="truncate">{value || "Choose screenshot receipt"}</span>
+        <span className="truncate">{value || "Choose receipt screenshot"}</span>
         <ImagePlus className="h-4 w-4 text-orange-300" />
       </span>
       <input className="sr-only" type="file" accept="image/*" onChange={onChange} />

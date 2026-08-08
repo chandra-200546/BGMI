@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { isSupabaseConfigured, supabase } from "./supabase";
 
 export type RegisteredChallenge = {
   id: string;
@@ -27,6 +28,8 @@ export type UserProfile = {
 type AuthContextType = {
   user: UserProfile | null;
   userChallenges: RegisteredChallenge[];
+  loginWithGoogle: () => Promise<void>;
+  loginWithEmail: (email: string) => Promise<void>;
   login: (profile: UserProfile) => void;
   logout: () => void;
   addChallenge: (challenge: Omit<RegisteredChallenge, "id" | "registeredAt">) => void;
@@ -69,6 +72,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return saved ? (JSON.parse(saved) as RegisteredChallenge[]) : defaultChallenges;
   });
 
+  // Listen to Supabase auth state if configured
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser({
+          email: session.user.email ?? "player@esports.com",
+          name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0].toUpperCase() || "Player",
+          bgmiUid: session.user.user_metadata?.bgmi_uid || "5482910382",
+          teamName: session.user.user_metadata?.team_name || "Soul Ember",
+        });
+      }
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser({
+          email: session.user.email ?? "player@esports.com",
+          name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0].toUpperCase() || "Player",
+          bgmiUid: session.user.user_metadata?.bgmi_uid || "5482910382",
+          teamName: session.user.user_metadata?.team_name || "Soul Ember",
+        });
+      } else {
+        // preserve local user session if set manually
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
   useEffect(() => {
     if (user) {
       localStorage.setItem(DEMO_USER_KEY, JSON.stringify(user));
@@ -81,11 +117,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(DEMO_CHALLENGES_KEY, JSON.stringify(userChallenges));
   }, [userChallenges]);
 
+  async function loginWithGoogle() {
+    if (isSupabaseConfigured()) {
+      await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin },
+      });
+    } else {
+      login({
+        email: "player.pro@gmail.com",
+        name: "Pro Esports Captain",
+        bgmiUid: "5482910382",
+        teamName: "Soul Ember",
+      });
+    }
+  }
+
+  async function loginWithEmail(email: string) {
+    if (isSupabaseConfigured()) {
+      await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: window.location.origin },
+      });
+    } else {
+      login({
+        email,
+        name: email.split("@")[0].toUpperCase(),
+        bgmiUid: "5129384712",
+        teamName: "Hydra Ops",
+      });
+    }
+  }
+
   function login(profile: UserProfile) {
     setUser(profile);
   }
 
   function logout() {
+    if (isSupabaseConfigured()) {
+      supabase.auth.signOut().catch(() => {});
+    }
     setUser(null);
   }
 
@@ -99,7 +170,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, userChallenges, login, logout, addChallenge }}>
+    <AuthContext.Provider
+      value={{ user, userChallenges, loginWithGoogle, loginWithEmail, login, logout, addChallenge }}
+    >
       {children}
     </AuthContext.Provider>
   );

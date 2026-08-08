@@ -106,12 +106,21 @@ export type PublicRegistrationSubmission = {
 
 export type AdminCommandPayload = {
   adminKey?: string;
-  action?: "announcement" | "tournament" | "match" | "registrationStatus";
+  action?:
+    | "announcement"
+    | "tournament"
+    | "match"
+    | "registrationStatus"
+    | "deleteTournament"
+    | "deleteAnnouncement"
+    | "deleteRegistration"
+    | "deleteMatch";
   title?: string;
   body?: string;
   category?: string;
   pinned?: boolean;
   tournamentId?: string;
+  announcementId?: string;
   tournamentName?: string;
   mode?: string;
   prizePool?: string | number;
@@ -427,6 +436,34 @@ export async function getAdminSnapshot(payload: unknown) {
   };
 }
 
+async function supabaseDelete(table: string, id: string) {
+  const supabase = supabaseHeaders();
+  if (!supabase) throw new Error("Supabase is not configured for admin writes");
+  const keys = [process.env.SUPABASE_SERVICE_ROLE_KEY, process.env.SUPABASE_ANON_KEY].filter(
+    Boolean,
+  ) as string[];
+
+  let lastError = "";
+  for (const key of keys) {
+    const response = await fetch(
+      `${supabase.url}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`,
+      {
+        method: "DELETE",
+        headers: {
+          ...supabase.headers,
+          apikey: key,
+          authorization: `Bearer ${key}`,
+        },
+      },
+    );
+
+    if (response.ok) return { ok: true };
+    lastError = `${response.status} ${await response.text()}`;
+  }
+
+  throw new Error(`Supabase ${table} delete failed: ${lastError}`);
+}
+
 export async function runAdminCommand(payload: unknown) {
   const command = payload as AdminCommandPayload;
   if (!validateAdminKey(command.adminKey)) throw new Error("Invalid admin key");
@@ -494,6 +531,27 @@ export async function runAdminCommand(payload: unknown) {
       updated_at: new Date().toISOString(),
     });
     return { id: command.registrationId.trim(), action: command.action, status };
+  }
+
+  if (command.action === "deleteTournament") {
+    const id = command.tournamentId?.trim();
+    if (!id) throw new Error("Tournament ID is required for deletion");
+    await supabaseDelete("tournaments", id);
+    return { id, action: command.action, status: "deleted" };
+  }
+
+  if (command.action === "deleteAnnouncement") {
+    const id = command.announcementId?.trim();
+    if (!id) throw new Error("Announcement ID is required for deletion");
+    await supabaseDelete("announcements", id);
+    return { id, action: command.action, status: "deleted" };
+  }
+
+  if (command.action === "deleteRegistration") {
+    const id = command.registrationId?.trim();
+    if (!id) throw new Error("Registration ID is required for deletion");
+    await supabaseDelete("registration_submissions", id);
+    return { id, action: command.action, status: "deleted" };
   }
 
   throw new Error("Unsupported admin command");

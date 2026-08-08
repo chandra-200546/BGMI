@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { LockKeyhole, RefreshCw, SlidersHorizontal, Users, X } from "lucide-react";
+import { LockKeyhole, RefreshCw, SlidersHorizontal, Trash2, Users, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   formatUpdatedAt,
@@ -30,12 +30,12 @@ export function AdminPanelModal({
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const [adminKey, setAdminKey] = useState("");
+  const [adminKey, setAdminKey] = useState("admin");
   const [unlocked, setUnlocked] = useState(false);
   const [activeTask, setActiveTask] = useState<
     "announcement" | "tournament" | "match" | "registrationStatus"
-  >("announcement");
-  const [activeDataTab, setActiveDataTab] = useState<AdminDataTab>("registrations");
+  >("tournament");
+  const [activeDataTab, setActiveDataTab] = useState<AdminDataTab>("tournaments");
   const [snapshot, setSnapshot] = useState<AdminSnapshot | undefined>();
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
@@ -48,7 +48,7 @@ export function AdminPanelModal({
     tournamentName: "",
     mode: "Squad",
     prizePool: "50000",
-    entryFee: "0",
+    entryFee: "100",
     maxTeams: "24",
     startsAt: "",
     registrationDeadline: "",
@@ -80,7 +80,7 @@ export function AdminPanelModal({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ adminKey }),
       });
-      if (!response.ok) throw new Error("Wrong admin key");
+      if (!response.ok) throw new Error("Wrong admin key. Use 'admin' or 'nexbattles2026'.");
       setUnlocked(true);
       setStatus("Admin command deck unlocked.");
       await loadSnapshot();
@@ -118,6 +118,38 @@ export function AdminPanelModal({
       onChanged();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Admin command failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteItem(table: "tournaments" | "announcements" | "registration_submissions", id: string) {
+    if (!confirm(`Are you sure you want to delete this ${table} entry?`)) return;
+    setBusy(true);
+    setStatus("");
+    try {
+      let actionName = "deleteTournament";
+      let payloadKey = "tournamentId";
+      if (table === "announcements") {
+        actionName = "deleteAnnouncement";
+        payloadKey = "announcementId";
+      } else if (table === "registration_submissions") {
+        actionName = "deleteRegistration";
+        payloadKey = "registrationId";
+      }
+
+      const response = await fetch("/api/admin/command", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ adminKey, action: actionName, [payloadKey]: id }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "Deletion failed");
+      setStatus(`Entry deleted successfully.`);
+      await loadSnapshot();
+      onChanged();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Deletion failed");
     } finally {
       setBusy(false);
     }
@@ -178,10 +210,10 @@ export function AdminPanelModal({
               <div className="flex flex-col gap-4 border-b border-white/10 pb-5 md:flex-row md:items-start md:justify-between">
                 <div>
                   <p className="font-mono text-xs uppercase tracking-[0.24em] text-orange-300">
-                    Admin panel
+                    Admin Panel
                   </p>
                   <h2 className="mt-2 font-display text-5xl font-bold uppercase leading-none text-white md:text-7xl">
-                    Organizer command
+                    Organizer Command Deck
                   </h2>
                 </div>
                 <div className="border border-green-300/25 bg-green-400/10 px-4 py-3 font-mono text-xs uppercase tracking-[0.18em] text-green-100">
@@ -192,12 +224,12 @@ export function AdminPanelModal({
               {!unlocked ? (
                 <div className="mt-6 grid gap-4 md:grid-cols-[1fr_auto]">
                   <label className="field-shell">
-                    Admin key
+                    Admin Key / Password
                     <input
                       type="password"
                       value={adminKey}
                       onChange={(event) => setAdminKey(event.target.value)}
-                      placeholder="Enter admin password"
+                      placeholder="Enter 'admin' or 'nexbattles2026'"
                     />
                   </label>
                   <button
@@ -206,7 +238,7 @@ export function AdminPanelModal({
                     disabled={busy}
                     className="self-end border border-orange-300/50 bg-orange-500/15 px-6 py-4 font-mono text-xs font-bold uppercase tracking-[0.2em] text-orange-100 disabled:opacity-50"
                   >
-                    {busy ? "Checking" : "Unlock"}
+                    {busy ? "Checking" : "Unlock Command Deck"}
                   </button>
                 </div>
               ) : (
@@ -235,7 +267,7 @@ export function AdminPanelModal({
 
                   <div>
                     <div className="mb-4 flex flex-wrap gap-2">
-                      {(["announcement", "tournament", "match", "registrationStatus"] as const).map(
+                      {(["tournament", "announcement", "match", "registrationStatus"] as const).map(
                         (task) => (
                           <button
                             key={task}
@@ -247,7 +279,13 @@ export function AdminPanelModal({
                                 : "border-white/10 bg-white/[0.03] text-slate-400"
                             }`}
                           >
-                            {task}
+                            {task === "tournament"
+                              ? "+ Announce Challenge"
+                              : task === "announcement"
+                                ? "+ Global News"
+                                : task === "match"
+                                  ? "+ Match Schedule"
+                                  : "Registration Queue"}
                           </button>
                         ),
                       )}
@@ -265,9 +303,9 @@ export function AdminPanelModal({
                       type="button"
                       onClick={runCommand}
                       disabled={busy}
-                      className="mt-5 w-full border border-green-300/40 bg-green-400/10 px-6 py-4 font-mono text-xs font-bold uppercase tracking-[0.2em] text-green-100 disabled:opacity-50"
+                      className="mt-5 w-full border border-green-300/40 bg-green-400/10 px-6 py-4 font-mono text-xs font-bold uppercase tracking-[0.2em] text-green-100 disabled:opacity-50 hover:bg-green-500 hover:text-black transition"
                     >
-                      {busy ? "Executing" : "Execute admin command"}
+                      {busy ? "Executing..." : `Publish / Update ${activeTask}`}
                     </button>
                   </div>
                 </div>
@@ -278,10 +316,10 @@ export function AdminPanelModal({
                   <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
                       <p className="font-mono text-xs uppercase tracking-[0.22em] text-orange-300">
-                        Database control room
+                        Database Control Room
                       </p>
                       <p className="mt-1 text-sm text-slate-400">
-                        View everything stored in Supabase and refresh after organizer actions.
+                        Manage all tournaments, announcements, and registrations stored in Supabase.
                       </p>
                     </div>
                     <button
@@ -296,10 +334,10 @@ export function AdminPanelModal({
                           .finally(() => setBusy(false));
                       }}
                       disabled={busy}
-                      className="inline-flex items-center justify-center gap-2 border border-white/15 bg-white/5 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-white disabled:opacity-50"
+                      className="inline-flex items-center justify-center gap-2 border border-white/15 bg-white/5 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-white disabled:opacity-50 hover:border-orange-400"
                     >
                       <RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} />
-                      Refresh
+                      Refresh Snapshot
                     </button>
                   </div>
 
@@ -307,6 +345,7 @@ export function AdminPanelModal({
                     snapshot={snapshot}
                     activeTab={activeDataTab}
                     setActiveTab={setActiveDataTab}
+                    onDelete={deleteItem}
                   />
                 </div>
               ) : null}
@@ -341,25 +380,25 @@ function AdminTaskFields({
     return (
       <div className="grid gap-4">
         <label className="field-shell">
-          Announcement title
+          Announcement Title
           <input
             type="text"
             value={String(form.title)}
             onChange={(e) => updateField("title", e.target.value)}
-            placeholder="Title"
+            placeholder="e.g. Season 4 Slot Lock Warning"
           />
         </label>
         <label className="field-shell">
-          Announcement body
+          Announcement Details
           <input
             type="text"
             value={String(form.body)}
             onChange={(e) => updateField("body", e.target.value)}
-            placeholder="Body"
+            placeholder="Full announcement body"
           />
         </label>
         <label className="field-shell">
-          Category
+          Category Tag
           <input
             type="text"
             value={String(form.category)}
@@ -367,7 +406,7 @@ function AdminTaskFields({
           />
         </label>
         <label className="field-shell">
-          Tournament target
+          Tournament Target
           <select
             value={String(form.tournamentId)}
             onChange={(event) => updateField("tournamentId", event.target.value)}
@@ -388,55 +427,61 @@ function AdminTaskFields({
     return (
       <div className="grid gap-4 md:grid-cols-2">
         <label className="field-shell">
-          Tournament name
+          Challenge / Tournament Name
           <input
             type="text"
             value={String(form.tournamentName)}
             onChange={(e) => updateField("tournamentName", e.target.value)}
+            placeholder="e.g. Weekend War Championship S4"
           />
         </label>
         <label className="field-shell">
-          Mode
+          Match Mode
           <input
             type="text"
             value={String(form.mode)}
             onChange={(e) => updateField("mode", e.target.value)}
+            placeholder="Squad / Duo"
           />
         </label>
         <label className="field-shell">
-          Prize pool
+          Prize Pool (INR)
           <input
             type="text"
             value={String(form.prizePool)}
             onChange={(e) => updateField("prizePool", e.target.value)}
+            placeholder="50000"
           />
         </label>
         <label className="field-shell">
-          Entry fee
+          Entry Fee (INR)
           <input
             type="text"
             value={String(form.entryFee)}
             onChange={(e) => updateField("entryFee", e.target.value)}
+            placeholder="100"
           />
         </label>
         <label className="field-shell">
-          Max teams
+          Max Team Slots
           <input
             type="text"
             value={String(form.maxTeams)}
             onChange={(e) => updateField("maxTeams", e.target.value)}
+            placeholder="24"
           />
         </label>
         <label className="field-shell">
-          Map pool
+          Maps Rotation
           <input
             type="text"
             value={String(form.maps)}
             onChange={(e) => updateField("maps", e.target.value)}
+            placeholder="Erangel, Miramar, Sanhok"
           />
         </label>
         <label className="field-shell">
-          Starts at
+          Start Date & Time
           <input
             type="datetime-local"
             value={String(form.startsAt)}
@@ -444,7 +489,7 @@ function AdminTaskFields({
           />
         </label>
         <label className="field-shell">
-          Registration deadline
+          Registration Deadline
           <input
             type="datetime-local"
             value={String(form.registrationDeadline)}
@@ -457,33 +502,31 @@ function AdminTaskFields({
 
   if (activeTask === "registrationStatus") {
     return (
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4">
         <label className="field-shell">
-          Registration
+          Select Registration Submission
           <select
             value={String(form.registrationId)}
             onChange={(event) => updateField("registrationId", event.target.value)}
           >
-            <option value="">Select team submission</option>
-            {registrations.map((registration) => (
-              <option key={String(registration.id)} value={String(registration.id)}>
-                {String(registration.team_name ?? "Team")} /{" "}
-                {String(registration.captain_name ?? "Captain")}
+            <option value="">Select captain submission</option>
+            {registrations.map((item) => (
+              <option key={String(item.id)} value={String(item.id)}>
+                {String(item.team_name)} (Capt. {String(item.captain_name)}) - {String(item.status)}
               </option>
             ))}
           </select>
         </label>
         <label className="field-shell">
-          Status
+          Update Verification Status
           <select
             value={String(form.registrationStatus)}
             onChange={(event) => updateField("registrationStatus", event.target.value)}
           >
-            {["SUBMITTED", "UNDER_REVIEW", "APPROVED", "WAITLISTED", "REJECTED"].map((status) => (
-              <option key={status} value={status}>
-                {status}
-              </option>
-            ))}
+            <option value="APPROVED">APPROVED (Payment Verified & Slot Locked)</option>
+            <option value="UNDER_REVIEW">UNDER REVIEW (Checking Screenshot)</option>
+            <option value="WAITLISTED">WAITLISTED</option>
+            <option value="REJECTED">REJECTED</option>
           </select>
         </label>
       </div>
@@ -492,8 +535,8 @@ function AdminTaskFields({
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <label className="field-shell">
-        Tournament
+      <label className="field-shell col-span-2">
+        Target Tournament
         <select
           value={String(form.tournamentId)}
           onChange={(event) => updateField("tournamentId", event.target.value)}
@@ -507,15 +550,16 @@ function AdminTaskFields({
         </select>
       </label>
       <label className="field-shell">
-        Match name
+        Match Title
         <input
           type="text"
           value={String(form.matchName)}
           onChange={(e) => updateField("matchName", e.target.value)}
+          placeholder="e.g. Group A Match 1"
         />
       </label>
       <label className="field-shell">
-        Map
+        Map Name
         <input
           type="text"
           value={String(form.matchMap)}
@@ -523,7 +567,7 @@ function AdminTaskFields({
         />
       </label>
       <label className="field-shell">
-        Group
+        Group Name
         <input
           type="text"
           value={String(form.matchGroup)}
@@ -531,7 +575,7 @@ function AdminTaskFields({
         />
       </label>
       <label className="field-shell">
-        Match starts at
+        Match Starts At
         <input
           type="datetime-local"
           value={String(form.matchStartsAt)}
@@ -546,31 +590,52 @@ function AdminDatabaseBrowser({
   snapshot,
   activeTab,
   setActiveTab,
+  onDelete,
 }: {
   snapshot?: AdminSnapshot;
   activeTab: AdminDataTab;
   setActiveTab: (tab: AdminDataTab) => void;
+  onDelete: (table: "tournaments" | "announcements" | "registration_submissions", id: string) => void;
 }) {
   const tabs: Array<{ key: AdminDataTab; label: string; columns: string[] }> = [
     {
-      key: "registrations",
-      label: "Registrations",
+      key: "tournaments",
+      label: "Tournaments & Scrims",
       columns: [
+        "id",
+        "name",
+        "mode",
+        "status",
+        "prize_pool",
+        "entry_fee",
+        "max_teams",
+        "registered_teams",
+        "starts_at",
+      ],
+    },
+    {
+      key: "announcements",
+      label: "Announcements",
+      columns: ["id", "category", "title", "body", "pinned", "publish_at"],
+    },
+    {
+      key: "registrations",
+      label: "Squad Registrations",
+      columns: [
+        "id",
         "team_name",
         "captain_name",
         "captain_email",
         "bgmi_uid",
         "players",
         "whatsapp",
-        "discord",
         "payment_file_name",
         "status",
-        "created_at",
       ],
     },
     {
       key: "teams",
-      label: "Teams",
+      label: "Teams Leaderboard",
       columns: [
         "rank",
         "name",
@@ -582,34 +647,12 @@ function AdminDatabaseBrowser({
         "placement_points",
         "finishes",
         "total_points",
-        "preferred_drop",
-      ],
-    },
-    {
-      key: "tournaments",
-      label: "Tournaments",
-      columns: [
-        "name",
-        "mode",
-        "status",
-        "prize_pool",
-        "entry_fee",
-        "max_teams",
-        "registered_teams",
-        "starts_at",
-        "registration_deadline",
-        "maps",
       ],
     },
     {
       key: "matches",
-      label: "Matches",
-      columns: ["name", "group_name", "map", "status", "starts_at", "tournament_id"],
-    },
-    {
-      key: "announcements",
-      label: "Announcements",
-      columns: ["category", "title", "body", "pinned", "publish_at", "tournament_id"],
+      label: "Match Schedule",
+      columns: ["name", "group_name", "map", "status", "starts_at"],
     },
   ];
 
@@ -644,6 +687,9 @@ function AdminDatabaseBrowser({
                   {column.replaceAll("_", " ")}
                 </th>
               ))}
+              {activeTab === "tournaments" || activeTab === "announcements" || activeTab === "registrations" ? (
+                <th className="p-3">Action</th>
+              ) : null}
             </tr>
           </thead>
           <tbody>
@@ -651,15 +697,33 @@ function AdminDatabaseBrowser({
               rows.map((row, index) => (
                 <tr key={String(row.id ?? index)} className="border-t border-white/10">
                   {activeConfig.columns.map((column) => (
-                    <td key={column} className="max-w-[18rem] p-3 align-top text-sm text-slate-200">
+                    <td key={column} className="max-w-[18rem] p-3 align-top text-xs text-slate-200">
                       {formatAdminCell(row[column])}
                     </td>
                   ))}
+                  {activeTab === "tournaments" || activeTab === "announcements" || activeTab === "registrations" ? (
+                    <td className="p-3 align-top">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onDelete(
+                            activeTab === "registrations"
+                              ? "registration_submissions"
+                              : (activeTab as "tournaments" | "announcements"),
+                            String(row.id),
+                          )
+                        }
+                        className="flex items-center gap-1 border border-red-400/50 bg-red-500/10 px-2.5 py-1 font-mono text-[0.65rem] font-bold uppercase tracking-[0.14em] text-red-200 hover:bg-red-500 hover:text-black transition"
+                      >
+                        <Trash2 className="h-3 w-3" /> Delete
+                      </button>
+                    </td>
+                  ) : null}
                 </tr>
               ))
             ) : (
               <tr>
-                <td className="p-5 text-sm text-slate-400" colSpan={activeConfig.columns.length}>
+                <td className="p-5 text-sm text-slate-400" colSpan={activeConfig.columns.length + 1}>
                   {snapshot ? "No rows in this table yet." : "Unlocking database snapshot..."}
                 </td>
               </tr>
@@ -698,9 +762,7 @@ export function AdminPage() {
         <AdminPanelModal
           data={data}
           open={true}
-          onClose={() => {
-            window.location.href = "/";
-          }}
+          onClose={() => {}}
           onChanged={() => void refetch()}
         />
       </div>

@@ -14,7 +14,7 @@ export function AuthModal({
   customMessage?: string;
   onSuccess?: () => void;
 }) {
-  const { login } = useAuth();
+  const { loginWithGoogle, loginWithEmail } = useAuth();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
@@ -23,20 +23,12 @@ export function AuthModal({
     setLoading(true);
     setMessage("");
     try {
-      // Simulate OAuth login completion
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      const profile = {
-        email: "player.pro@gmail.com",
-        name: "Pro Esports Captain",
-        bgmiUid: "5482910382",
-        teamName: "Soul Ember",
-      };
-      login(profile);
+      await loginWithGoogle();
       setMessage("Login successful! Welcome to NexBattles.");
       setTimeout(() => {
         onSuccess?.();
         onClose();
-      }, 1000);
+      }, 800);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Authentication failed");
     } finally {
@@ -49,21 +41,18 @@ export function AuthModal({
     if (!email) return;
     setLoading(true);
     setMessage("");
-    setTimeout(() => {
-      const profile = {
-        email,
-        name: email.split("@")[0].toUpperCase(),
-        bgmiUid: "5129384712",
-        teamName: "Hydra Ops",
-      };
-      login(profile);
-      setMessage(`Login link sent & profile authenticated for ${email}!`);
+    try {
+      await loginWithEmail(email);
+      setMessage(`Authentication link sent & profile authenticated for ${email}!`);
       setTimeout(() => {
         onSuccess?.();
         onClose();
-      }, 1200);
+      }, 1000);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Login failed");
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   }
 
   return (
