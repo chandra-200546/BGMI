@@ -126,22 +126,3 @@ CREATE POLICY "Admin All Teams" ON public.teams FOR ALL USING (true);
 CREATE POLICY "Admin All Matches" ON public.matches FOR ALL USING (true);
 CREATE POLICY "Admin All Announcements" ON public.announcements FOR ALL USING (true);
 CREATE POLICY "Admin All Registration Submissions" ON public.registration_submissions FOR ALL USING (true);
-
--- Seed Initial Tournaments Data
-INSERT INTO public.tournaments (id, name, mode, status, prize_pool, entry_fee, max_teams, registered_teams, phase)
-VALUES 
-('tour-01', 'Weekend War Championship (Season 4)', 'Squad', 'REGISTRATION_OPEN', 50000, 100, 24, 18, 'Registration'),
-('tour-02', 'Daily Grind - Slot 1 (02:00 PM)', 'Squad', 'REGISTRATION_OPEN', 5000, 50, 24, 12, 'Lobby Active'),
-('tour-03', 'Daily Grind - Slot 2 (05:00 PM)', 'Squad', 'REGISTRATION_OPEN', 5000, 50, 24, 8, 'Registration'),
-('tour-04', 'Elite Series Qualifiers', 'Squad', 'REGISTRATION_OPEN', 100000, 250, 48, 34, 'Group Stage')
-ON CONFLICT (id) DO NOTHING;
-
--- Seed Initial Teams Data
-INSERT INTO public.teams (id, name, short_name, region, captain, matches_played, wwcd, placement_points, finishes)
-VALUES 
-('team-01', 'Team Soul', 'SOUL', 'IN', 'Mortal', 15, 6, 142, 98),
-('team-02', 'GodLike Esports', 'GODL', 'IN', 'Jonathan', 15, 5, 128, 110),
-('team-03', 'Team XSpark', 'TX', 'IN', 'Scout', 15, 4, 115, 85),
-('team-04', 'Blind Esports', 'BLIND', 'IN', 'Manya', 15, 3, 102, 76),
-('team-05', 'Entity Gaming', 'ENTITY', 'IN', 'Saumraj', 15, 3, 95, 64)
-ON CONFLICT (id) DO NOTHING;

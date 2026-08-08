@@ -704,66 +704,16 @@ export async function getPlatformData(): Promise<PlatformData> {
     const supabaseData = await getSupabasePlatformData();
     if (supabaseData) return supabaseData;
   } catch (error) {
-    console.error("Supabase read failed, falling back to Prisma / mock data:", error);
+    console.error("Supabase read error:", error);
   }
 
-  const [tournaments, teams, matches, announcements] = await Promise.all([
-    prisma.tournament.findMany({ orderBy: { startsAt: "asc" } }),
-    prisma.team.findMany({
-      orderBy: [{ placementPoints: "desc" }, { wwcd: "desc" }, { finishes: "desc" }],
-    }),
-    prisma.matchSchedule.findMany({ orderBy: { startsAt: "asc" } }),
-    prisma.announcement.findMany({ orderBy: [{ pinned: "desc" }, { publishAt: "desc" }] }),
-  ]);
-
+  // Pure real-time empty state when no DB rows exist:
   return {
-    tournaments: tournaments.map((t, index) => ({
-      id: t.id,
-      name: t.name,
-      mode: t.mode,
-      status: supabaseStatus(t.status, t.registeredTeams, t.maxTeams),
-      prize: formatCurrency(t.prizePool),
-      fee: formatCurrency(t.entryFee),
-      slots: t.maxTeams,
-      registered: t.registeredTeams,
-      starts: formatDate(t.startsAt),
-      deadline: formatDate(t.registrationDeadline),
-      map: parseList(t.maps).join(", "),
-      phase: t.phase ?? "League",
-      accent: t.accent ?? accentClasses[index % accentClasses.length],
-    })),
-    teams: teams.map((team, index) => ({
-      rank: index + 1,
-      name: team.name,
-      short: team.shortName,
-      region: team.region,
-      captain: team.captain,
-      played: team.matchesPlayed,
-      wwcd: team.wwcd,
-      placementPoints: team.placementPoints,
-      finishes: team.finishes,
-      totalPoints: team.placementPoints + team.finishes - team.penaltyPoints,
-      trend: team.wwcd > 3 ? "up" : team.penaltyPoints > 10 ? "down" : "flat",
-      recentForm: parseList(team.recentForm),
-      preferredDrop: team.preferredDrop ?? "Pochinki",
-    })),
-    schedules: matches.map((match) => ({
-      id: match.id,
-      title: match.name,
-      startsAt: match.startsAt.toISOString(),
-      map: match.map,
-      status: match.status as ScheduleItem["status"],
-      group: match.groupName,
-    })),
-    announcements: announcements.map((a) => ({
-      id: a.id,
-      title: a.title,
-      body: a.body ?? a.title,
-      category: a.category,
-      pinned: a.pinned,
-      publishAt: a.publishAt.toISOString(),
-    })),
+    tournaments: [],
+    teams: [],
+    schedules: [],
+    announcements: [],
     generatedAt: new Date().toISOString(),
-    source: "prisma",
+    source: "supabase",
   };
 }
