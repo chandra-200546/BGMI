@@ -136,16 +136,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function loginWithGoogle() {
     await syncClientAuthConfig();
 
+    const pendingTournamentId = typeof window !== "undefined" ? sessionStorage.getItem("lordsesports_pending_tournament_id") : null;
+    const redirectPath = pendingTournamentId
+      ? `/register?tournamentId=${encodeURIComponent(pendingTournamentId)}`
+      : typeof window !== "undefined"
+      ? window.location.pathname + window.location.search
+      : "/register";
+
+    const targetRedirect = typeof window !== "undefined" ? `${window.location.origin}${redirectPath}` : "https://lordsesports.in/register";
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo: targetRedirect,
       },
     });
 
     if (error) {
       console.warn("Supabase SDK OAuth notice, triggering server OAuth endpoint:", error.message);
-      window.location.href = "/api/auth/google";
+      if (typeof window !== "undefined") {
+        window.location.href = `/api/auth/google?redirect_to=${encodeURIComponent(targetRedirect)}`;
+      }
     }
   }
 

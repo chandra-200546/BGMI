@@ -82,7 +82,7 @@ async function handleAuthApi(request: Request): Promise<Response | undefined> {
       );
     }
     const origin = url.origin;
-    const redirectTo = `${origin}/dashboard`;
+    const redirectTo = url.searchParams.get("redirect_to") || `${origin}/register`;
     const targetUrl = `${supabaseUrl.replace(/\/$/, "")}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
     return Response.redirect(targetUrl, 302);
   }

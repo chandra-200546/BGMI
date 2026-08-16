@@ -33,6 +33,9 @@ export function TournamentSlotCard({
   const timings = ["1:23 PM", "1:54 PM", "2:24 PM", "3:02 PM"];
 
   function handleSlotBooking() {
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("lordsesports_pending_tournament_id", tournament.id);
+    }
     if (onBookSlot) {
       onBookSlot(tournament);
       return;

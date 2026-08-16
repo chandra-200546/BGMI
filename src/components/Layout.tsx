@@ -9,7 +9,7 @@ import {
   VolumeX,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth, AuthProvider } from "../lib/auth-context";
 import {
   formatUpdatedAt,
@@ -31,62 +31,47 @@ export function AppNav({
   onOpenAuth: () => void;
 }) {
   const { user, logout } = useAuth();
+  const navLinks = [
+    { label: "Home", to: "/" },
+    { label: "Weekend War", to: "/weekend-war" },
+    { label: "Daily Grind", to: "/daily-grind" },
+    { label: "Points Table", to: "/points-table" },
+    { label: "Weekly Points", to: "/weekly-points" },
+    { label: "Teams", to: "/teams" },
+    { label: "Schedule", to: "/schedule" },
+    { label: "Register", to: "/register" },
+  ];
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-sky-400/20 bg-black/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 lg:px-6">
-        <Link to="/" className="flex items-center gap-3">
+    <header className="fixed top-0 left-0 right-0 z-40 border-b border-sky-400/20 bg-[#030712]/90 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 lg:px-6">
+        {/* Brand Logo & Name */}
+        <Link to="/" className="flex items-center gap-3 font-display text-2xl font-bold uppercase tracking-wider text-white">
           <img
             src="/logo.png"
             alt="LordsEsports Logo"
-            className="h-10 w-10 rounded-md border border-sky-400/40 bg-black/60 object-contain p-0.5"
+            className="h-9 w-9 rounded-md border border-sky-400/40 bg-black/60 object-contain p-0.5"
           />
-          <span>
-            <span className="block font-display text-2xl font-bold uppercase leading-none tracking-[0.12em] text-white">
-              LordsEsports
-            </span>
-            <span className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-sky-400">
-              BGMI Hub
-            </span>
-          </span>
+          <span className="hidden sm:inline">LordsEsports</span>
         </Link>
 
-        {/* Navigation */}
-        <nav className="hidden items-center gap-6 lg:flex">
-          <NavLink
-            to="/"
-            className={({ isActive }) =>
-              `font-mono text-xs uppercase tracking-[0.18em] transition ${
-                isActive
-                  ? "font-bold text-sky-400 border-b-2 border-sky-400 pb-0.5"
-                  : "text-slate-300 hover:text-sky-300"
-              }`
-            }
-          >
-            Home
-          </NavLink>
-
-          <a
-            href="https://whatsapp.com/channel/0029VanlLBL9RZARIMR3Vm2W"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.18em] text-slate-300 transition hover:text-green-400"
-          >
-            <MessageCircle className="h-3.5 w-3.5 text-green-400" /> WhatsApp Channel
-          </a>
-
-          <NavLink
-            to="/contact"
-            className={({ isActive }) =>
-              `font-mono text-xs uppercase tracking-[0.18em] transition ${
-                isActive
-                  ? "font-bold text-sky-400 border-b-2 border-sky-400 pb-0.5"
-                  : "text-slate-300 hover:text-sky-300"
-              }`
-            }
-          >
-            Contact Us
-          </NavLink>
+        {/* Navigation Links */}
+        <nav className="hidden lg:flex items-center gap-1 font-mono text-[0.68rem] uppercase tracking-[0.16em]">
+          {navLinks.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              className={({ isActive }) =>
+                `px-3 py-1.5 transition ${
+                  isActive
+                    ? "border-b-2 border-sky-400 text-sky-300 font-bold"
+                    : "text-slate-400 hover:text-white"
+                }`
+              }
+            >
+              {link.label}
+            </NavLink>
+          ))}
         </nav>
 
         {/* Auth Actions */}
@@ -238,9 +223,21 @@ export function Footer({ onOpenAdmin }: { onOpenAdmin?: () => void }) {
 export function LayoutContent({ children }: { children: ReactNode }) {
   const sound = useSoundDesign();
   const [adminOpen, setAdminOpen] = useState(false);
-  const { authModalOpen, openAuthModal, closeAuthModal } = useAuth();
+  const { user, authModalOpen, openAuthModal, closeAuthModal } = useAuth();
   const { data, refetch } = usePlatformData();
+  const navigate = useNavigate();
   const liveLabel = formatUpdatedAt(data.generatedAt);
+
+  // Auto redirect to pending tournament registration if player just logged in
+  useEffect(() => {
+    if (user && typeof window !== "undefined") {
+      const pendingTournamentId = sessionStorage.getItem("lordsesports_pending_tournament_id");
+      if (pendingTournamentId) {
+        sessionStorage.removeItem("lordsesports_pending_tournament_id");
+        navigate(`/register?tournamentId=${encodeURIComponent(pendingTournamentId)}`);
+      }
+    }
+  }, [user, navigate]);
 
   // Secret keystroke detection to open Admin Panel modal when bgmi!@#$% (or vinaygbmi!@#$%^&*) is typed
   useEffect(() => {
