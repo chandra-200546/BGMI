@@ -31,6 +31,11 @@ export function AppNav({
   onOpenAuth: () => void;
 }) {
   const { user, logout } = useAuth();
+  const navLinks = [
+    { label: "Teams", to: "/teams" },
+    { label: "Schedule", to: "/schedule" },
+    { label: "Register", to: "/register" },
+  ];
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 border-b border-sky-400/20 bg-[#030712]/90 backdrop-blur-xl">
@@ -44,6 +49,25 @@ export function AppNav({
           />
           <span className="inline">LordsEsports</span>
         </Link>
+
+        {/* Navigation Links: Teams, Schedule, Register */}
+        <nav className="flex items-center gap-1 font-mono text-[0.72rem] uppercase tracking-[0.16em]">
+          {navLinks.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              className={({ isActive }) =>
+                `px-3 py-1.5 transition ${
+                  isActive
+                    ? "border-b-2 border-sky-400 text-sky-300 font-bold"
+                    : "text-slate-400 hover:text-white"
+                }`
+              }
+            >
+              {link.label}
+            </NavLink>
+          ))}
+        </nav>
 
         {/* Auth Actions */}
         <div className="flex items-center gap-2">
