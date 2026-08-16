@@ -38,9 +38,11 @@ export function AppNav({
     <header className="fixed inset-x-0 top-0 z-50 border-b border-sky-400/20 bg-black/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 lg:px-6">
         <Link to="/" className="flex items-center gap-3">
-          <span className="grid h-10 w-10 place-items-center border border-sky-400/60 bg-sky-500/10 text-sky-400">
-            <Crosshair className="h-5 w-5" />
-          </span>
+          <img
+            src="/logo.png"
+            alt="LordsEsports Logo"
+            className="h-10 w-10 rounded-md border border-sky-400/40 bg-black/60 object-contain p-0.5"
+          />
           <span>
             <span className="block font-display text-2xl font-bold uppercase leading-none tracking-[0.12em] text-white">
               LordsEsports
@@ -144,8 +146,13 @@ export function Footer() {
         <div className="grid gap-8 md:grid-cols-2">
           {/* Brand & Mission */}
           <div>
-            <Link to="/" className="font-display text-4xl font-bold uppercase tracking-wider text-white">
-              LordsEsports BGMI
+            <Link to="/" className="flex items-center gap-3 font-display text-4xl font-bold uppercase tracking-wider text-white">
+              <img
+                src="/logo.png"
+                alt="LordsEsports Logo"
+                className="h-12 w-12 rounded-md border border-sky-400/40 bg-black/60 object-contain p-1"
+              />
+              <span>LordsEsports BGMI</span>
             </Link>
             <p className="mt-3 max-w-md font-mono text-xs leading-relaxed text-slate-400">
               India's premiere competitive BGMI tournament & scrim hub. Real-time standings, verified rosters, protected match drop vaults, and automated points tables.
