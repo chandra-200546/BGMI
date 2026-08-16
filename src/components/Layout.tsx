@@ -31,16 +31,6 @@ export function AppNav({
   onOpenAuth: () => void;
 }) {
   const { user, logout } = useAuth();
-  const navLinks = [
-    { label: "Home", to: "/" },
-    { label: "Weekend War", to: "/weekend-war" },
-    { label: "Daily Grind", to: "/daily-grind" },
-    { label: "Points Table", to: "/points-table" },
-    { label: "Weekly Points", to: "/weekly-points" },
-    { label: "Teams", to: "/teams" },
-    { label: "Schedule", to: "/schedule" },
-    { label: "Register", to: "/register" },
-  ];
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 border-b border-sky-400/20 bg-[#030712]/90 backdrop-blur-xl">
@@ -52,27 +42,8 @@ export function AppNav({
             alt="LordsEsports Logo"
             className="h-9 w-9 rounded-md border border-sky-400/40 bg-black/60 object-contain p-0.5"
           />
-          <span className="hidden sm:inline">LordsEsports</span>
+          <span className="inline">LordsEsports</span>
         </Link>
-
-        {/* Navigation Links */}
-        <nav className="hidden lg:flex items-center gap-1 font-mono text-[0.68rem] uppercase tracking-[0.16em]">
-          {navLinks.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              className={({ isActive }) =>
-                `px-3 py-1.5 transition ${
-                  isActive
-                    ? "border-b-2 border-sky-400 text-sky-300 font-bold"
-                    : "text-slate-400 hover:text-white"
-                }`
-              }
-            >
-              {link.label}
-            </NavLink>
-          ))}
-        </nav>
 
         {/* Auth Actions */}
         <div className="flex items-center gap-2">
