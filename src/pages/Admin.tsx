@@ -136,27 +136,6 @@ export function AdminPanelModal({
     await loadSnapshotWithKey(adminKey);
   }
 
-  async function wipeSeedData() {
-    if (!confirm("Are you sure you want to purge ALL seed/sample rows from the database?")) return;
-    setBusy(true);
-    setStatus("");
-    try {
-      const response = await fetch("/api/admin/command", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ adminKey, action: "wipeSeedData" }),
-      });
-      if (!response.ok) throw new Error("Failed to purge seed data");
-      setStatus("All seed & sample rows purged successfully! Database is now 100% real-time.");
-      await loadSnapshot();
-      onChanged();
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Failed to purge seed data");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function runCommand() {
     setBusy(true);
     setStatus("");
@@ -264,25 +243,14 @@ export function AdminPanelModal({
             Organizer Admin Panel
           </h2>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={() => void wipeSeedData()}
-            disabled={busy || !unlocked}
-            className="flex items-center gap-1.5 border border-red-400/50 bg-red-500/10 px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-red-200 hover:bg-red-500 hover:text-black transition disabled:opacity-40"
-            title="Wipe all seed/sample rows from database"
-          >
-            <Trash2 className="h-4 w-4" /> Purge Seed Data
-          </button>
-          <button
-            type="button"
-            onClick={() => void loadSnapshot()}
-            disabled={busy || !unlocked}
-            className="flex items-center gap-2 border border-sky-400/30 bg-sky-500/10 px-3 py-2 font-mono text-xs uppercase tracking-[0.16em] text-sky-200 hover:bg-sky-400 hover:text-black disabled:opacity-40"
-          >
-            <RefreshCw className={`h-4 w-4 ${busy ? "animate-spin text-sky-400" : ""}`} /> Sync DB
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => void loadSnapshot()}
+          disabled={busy || !unlocked}
+          className="flex items-center gap-2 border border-sky-400/30 bg-sky-500/10 px-3 py-2 font-mono text-xs uppercase tracking-[0.16em] text-sky-200 hover:bg-sky-400 hover:text-black disabled:opacity-40"
+        >
+          <RefreshCw className={`h-4 w-4 ${busy ? "animate-spin text-sky-400" : ""}`} /> Sync DB
+        </button>
       </div>
 
       {!unlocked ? (
