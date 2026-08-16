@@ -592,7 +592,18 @@ async function getSupabasePlatformData(): Promise<PlatformData | undefined> {
     ),
   ]);
 
-  const tournaments: Tournament[] = tournamentRows.map((row, index) => ({
+  const seedIds = new Set(["nebula-masters", "crimson-rift"]);
+  const userTournaments = tournamentRows.filter((row) => !seedIds.has(row.id));
+
+  // Purge legacy seed rows from Supabase if present
+  const seedRowsToPurge = tournamentRows.filter((row) => seedIds.has(row.id));
+  if (seedRowsToPurge.length > 0) {
+    for (const seedRow of seedRowsToPurge) {
+      void supabaseDelete("tournaments", seedRow.id);
+    }
+  }
+
+  const tournaments: Tournament[] = userTournaments.map((row, index) => ({
     id: row.id,
     name: row.name,
     mode: row.mode,
@@ -609,7 +620,11 @@ async function getSupabasePlatformData(): Promise<PlatformData | undefined> {
     mediaUrl: row.media_url ?? undefined,
   }));
 
-  const teams: Team[] = teamRows.map((row, index) => ({
+  const userTeams = teamRows.filter((row) => !row.tournament_id || !seedIds.has(row.tournament_id));
+  const userMatches = matchRows.filter((row) => !row.tournament_id || !seedIds.has(row.tournament_id));
+  const userAnnouncements = announcementRows.filter((row) => !row.tournament_id || !seedIds.has(row.tournament_id));
+
+  const teams: Team[] = userTeams.map((row, index) => ({
     rank: index + 1,
     name: row.name,
     short: row.short_name,
@@ -624,7 +639,7 @@ async function getSupabasePlatformData(): Promise<PlatformData | undefined> {
     drop: row.preferred_drop ?? "Pochinki",
   }));
 
-  const schedules: ScheduleItem[] = matchRows.map((row) => ({
+  const schedules: ScheduleItem[] = userMatches.map((row) => ({
     id: row.id,
     title: row.name,
     startsAt: row.starts_at,
@@ -633,7 +648,7 @@ async function getSupabasePlatformData(): Promise<PlatformData | undefined> {
     group: row.group_name,
   }));
 
-  const announcements: AnnouncementItem[] = announcementRows.map((row) => ({
+  const announcements: AnnouncementItem[] = userAnnouncements.map((row) => ({
     id: row.id,
     title: row.title,
     body: row.body ?? row.title,
