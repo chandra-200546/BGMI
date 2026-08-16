@@ -32,12 +32,7 @@ export function AdminPanelModal({
   onChanged: () => void;
   inline?: boolean;
 }) {
-  const [adminKey, setAdminKey] = useState(() => {
-    if (typeof window !== "undefined") {
-      return sessionStorage.getItem("lordsesports_admin_pass") || "vinaygbmi!@#$%^&*";
-    }
-    return "vinaygbmi!@#$%^&*";
-  });
+  const [adminKey, setAdminKey] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [activeTask, setActiveTask] = useState<
     "tournament" | "announcement" | "match" | "registrationStatus" | "roomCredentials"
@@ -82,8 +77,10 @@ export function AdminPanelModal({
   }, [data.tournaments, form.tournamentId]);
 
   useEffect(() => {
-    if (open && adminKey && !unlocked) {
-      void unlockWithKey(adminKey);
+    if (open) {
+      setUnlocked(false);
+      setAdminKey("");
+      setStatus("");
     }
   }, [open]);
 
@@ -105,9 +102,6 @@ export function AdminPanelModal({
         throw new Error(errorData.error ?? "Invalid admin password. Check your password.");
       }
       setUnlocked(true);
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem("lordsesports_admin_pass", keyToTry);
-      }
       setStatus("Admin Command Deck unlocked successfully.");
       await loadSnapshotWithKey(keyToTry);
     } catch (error) {
