@@ -1,14 +1,13 @@
 import { CalendarDays, Shield } from "lucide-react";
-import { Link } from "react-router-dom";
 import { Section, usePlatformData } from "../lib/shared-ui";
 import type { ScheduleItem } from "../lib/platform-types";
 
 function ScheduleCard({ match, index }: { match: ScheduleItem; index: number }) {
   return (
-    <article className="group hud-panel border border-sky-400/25 min-h-64 p-5 flex flex-col justify-between transition hover:border-sky-400">
+    <article className="group hud-panel border border-sky-400/25 min-h-64 p-5 flex flex-col justify-between transition hover:border-sky-400 bg-slate-950">
       <div>
         <div className="flex items-center justify-between">
-          <span className="font-mono text-xs uppercase tracking-[0.22em] text-sky-400">
+          <span className="font-mono text-xs uppercase tracking-[0.22em] text-sky-400 font-bold">
             {match.group || "Group A"}
           </span>
           <span className="border border-sky-400/30 bg-sky-500/10 px-2 py-1 font-mono text-[0.62rem] uppercase tracking-[0.16em] text-sky-200">
@@ -52,13 +51,7 @@ function ScheduleContent({ schedules }: { schedules: ScheduleItem[] }) {
         <div className="border border-sky-400/20 bg-slate-950 p-10 text-center font-mono text-xs uppercase tracking-[0.18em] text-slate-400">
           <CalendarDays className="mx-auto h-10 w-10 text-sky-400/60 mb-3" />
           <p className="text-sm font-bold text-white">No Upcoming Match Schedules Posted Yet</p>
-          <p className="mt-2 text-slate-400">Match drop schedules will appear here live once published by organizers.</p>
-          <Link
-            to="/admin"
-            className="mt-6 inline-block border border-sky-400/60 bg-sky-500/20 px-6 py-3 text-sky-200 hover:bg-sky-400 hover:text-black transition font-bold"
-          >
-            Post Match Schedule in Admin Panel
-          </Link>
+          <p className="mt-2 text-slate-400">Match drop schedules will appear here live once published by organizers in the Admin Panel.</p>
         </div>
       )}
     </Section>
@@ -69,7 +62,7 @@ export function SchedulePage() {
   const { data } = usePlatformData();
 
   return (
-    <div className="pt-20">
+    <div className="pt-24 pb-16 px-4 max-w-7xl mx-auto">
       <ScheduleContent schedules={data.schedules} />
     </div>
   );

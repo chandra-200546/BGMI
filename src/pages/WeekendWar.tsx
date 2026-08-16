@@ -14,7 +14,7 @@ export function WeekendWarPage() {
   const prizeNumber = Number((activeTournament?.prize ?? "0").replace(/[^0-9]/g, "")) || 0;
 
   return (
-    <div className="pt-24 pb-16">
+    <div className="pt-24 pb-16 px-4 max-w-7xl mx-auto">
       <Section eyebrow="Category 01 / Major Championship" title="Weekend War Championship">
         <p className="max-w-3xl font-mono text-sm leading-relaxed text-slate-300">
           The ultimate weekend arena for top-tier battle royale squads. Heavy prize pools, official caster coverage, live drop points, and verified leaderboard rankings.
@@ -22,7 +22,7 @@ export function WeekendWarPage() {
 
         {activeTournament ? (
           <div className="mt-10 grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
-            <div className="hud-panel p-6">
+            <div className="hud-panel p-6 border border-sky-400/30 bg-slate-950">
               {activeTournament.mediaUrl ? (
                 <div className="mb-6 overflow-hidden border border-sky-400/30 bg-black">
                   <img
@@ -34,7 +34,7 @@ export function WeekendWarPage() {
               ) : null}
 
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                <span className="font-mono text-xs uppercase tracking-[0.24em] text-sky-400">
+                <span className="font-mono text-xs uppercase tracking-[0.24em] text-sky-400 font-bold">
                   Official Championship Format
                 </span>
                 <Zap className="h-6 w-6 text-sky-400" />
@@ -65,11 +65,11 @@ export function WeekendWarPage() {
                 return (
                   <div
                     key={tier.label}
-                    className="hud-panel min-h-64 p-5 flex flex-col justify-between"
+                    className="hud-panel min-h-64 p-5 flex flex-col justify-between border border-sky-400/20 bg-slate-950"
                   >
                     <div>
                       <Icon className="h-8 w-8 text-sky-400" />
-                      <p className="mt-6 font-mono text-xs uppercase tracking-[0.22em] text-sky-300">
+                      <p className="mt-6 font-mono text-xs uppercase tracking-[0.22em] text-sky-300 font-bold">
                         {tier.badge}
                       </p>
                       <h3 className="mt-2 font-display text-3xl font-bold uppercase text-white">
@@ -94,14 +94,8 @@ export function WeekendWarPage() {
         ) : (
           <div className="mt-10 border border-sky-400/20 bg-slate-950 p-10 text-center font-mono text-xs uppercase tracking-[0.18em] text-slate-400">
             <Crown className="mx-auto h-10 w-10 text-sky-400/60 mb-3" />
-            <p className="text-sm font-bold text-white">No Active Weekend War Championship Scheduled</p>
-            <p className="mt-2 text-slate-400">Organizers can create and launch major weekend tournaments anytime from the Admin Panel.</p>
-            <Link
-              to="/admin"
-              className="mt-6 inline-block border border-sky-400/60 bg-sky-500/20 px-6 py-3 text-sky-200 hover:bg-sky-400 hover:text-black transition font-bold"
-            >
-              Announce Championship in Admin Panel
-            </Link>
+            <p className="text-sm font-bold text-white">No Active Weekend War Championship Scheduled Currently</p>
+            <p className="mt-2 text-slate-400">Championships will appear here automatically when announced live by organizers.</p>
           </div>
         )}
 
@@ -109,19 +103,10 @@ export function WeekendWarPage() {
           <h4 className="font-display text-3xl font-bold uppercase text-white">
             Championship Rules & Format
           </h4>
-          <ul className="mt-4 grid gap-3 font-mono text-xs text-slate-300 md:grid-cols-2">
-            <li className="flex items-center gap-2 border border-white/10 p-3">
-              <Shield className="h-4 w-4 text-sky-400" /> 16 Placement Points + 1 Point per Frag
-            </li>
-            <li className="flex items-center gap-2 border border-white/10 p-3">
-              <Shield className="h-4 w-4 text-sky-400" /> Room credentials released 15 mins before drop
-            </li>
-            <li className="flex items-center gap-2 border border-white/10 p-3">
-              <Shield className="h-4 w-4 text-sky-400" /> Emulators strictly banned (Mobile Only)
-            </li>
-            <li className="flex items-center gap-2 border border-white/10 p-3">
-              <Shield className="h-4 w-4 text-sky-400" /> Captain check-in required on Discord / WhatsApp
-            </li>
+          <ul className="mt-4 space-y-2 font-mono text-xs text-slate-300 leading-relaxed">
+            <li>• All team rosters must match registered BGMI In-Game Names (IGNs).</li>
+            <li>• Room credentials (ID & Password) are released to verified team captains prior to match drop.</li>
+            <li>• Point calculation follows standard BGIS/BGMS rules: 10 placement pts for WWCD + 1 finish pt per kill.</li>
           </ul>
         </div>
       </Section>
