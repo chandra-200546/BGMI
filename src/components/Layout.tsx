@@ -179,7 +179,7 @@ export function Footer() {
           </div>
 
           {/* Legal & Support */}
-          <div>
+          <div className="md:justify-self-end md:text-right">
             <h4 className="font-mono text-xs font-bold uppercase tracking-[0.24em] text-sky-400">
               Legal & Support
             </h4>
