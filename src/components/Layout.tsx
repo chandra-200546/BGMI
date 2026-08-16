@@ -1,7 +1,5 @@
 import {
   Crosshair,
-  Gamepad2,
-  Headphones,
   LayoutDashboard,
   LogIn,
   LogOut,
@@ -162,8 +160,6 @@ export function Footer() {
               {[
                 { label: "WhatsApp Channel", href: "https://whatsapp.com/channel/0029VanlLBL9RZARIMR3Vm2W", icon: MessageCircle },
                 { label: "Instagram", href: "https://www.instagram.com/lordsesports.in?igsh=MXRyb2liaTN4YW5heg==", icon: Shield },
-                { label: "Discord", href: "https://discord.gg/lordsesports", icon: Headphones },
-                { label: "YouTube", href: "https://youtube.com/@lordsesports", icon: Gamepad2 },
               ].map(({ label, href, icon: Icon }) => (
                 <a
                   key={label}
