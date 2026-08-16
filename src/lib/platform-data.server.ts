@@ -316,6 +316,25 @@ async function supabaseInsert(table: string, payload: Record<string, unknown>) {
 
     if (response.ok) return (await response.json()) as unknown;
     lastError = await response.text();
+
+    // If PostgREST fails because media_url column is missing in database schema cache (PGRST204), retry without media_url
+    if (lastError.includes("PGRST204") || lastError.includes("media_url")) {
+      const sanitized = { ...payload };
+      delete sanitized.media_url;
+      delete sanitized.mediaUrl;
+      const retryResponse = await fetch(`${url.replace(/\/$/, "")}/rest/v1/${table}`, {
+        method: "POST",
+        headers: {
+          apikey: key,
+          authorization: `Bearer ${key}`,
+          "content-type": "application/json",
+          prefer: "return=representation",
+        },
+        body: JSON.stringify(sanitized),
+      });
+
+      if (retryResponse.ok) return (await retryResponse.json()) as unknown;
+    }
   }
 
   throw new Error(`Supabase ${table} insert failed: ${lastError}`);
@@ -343,6 +362,24 @@ async function supabasePatch(table: string, id: string, payload: Record<string, 
 
     if (response.ok) return (await response.json()) as unknown;
     lastError = await response.text();
+
+    if (lastError.includes("PGRST204") || lastError.includes("media_url")) {
+      const sanitized = { ...payload };
+      delete sanitized.media_url;
+      delete sanitized.mediaUrl;
+      const retryResponse = await fetch(`${url.replace(/\/$/, "")}/rest/v1/${table}?id=eq.${id}`, {
+        method: "PATCH",
+        headers: {
+          apikey: key,
+          authorization: `Bearer ${key}`,
+          "content-type": "application/json",
+          prefer: "return=representation",
+        },
+        body: JSON.stringify(sanitized),
+      });
+
+      if (retryResponse.ok) return (await retryResponse.json()) as unknown;
+    }
   }
 
   throw new Error(`Supabase ${table} update failed: ${lastError}`);

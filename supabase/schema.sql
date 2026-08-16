@@ -12,9 +12,12 @@ create table if not exists public.tournaments (
   maps text[] not null default '{}',
   phase text,
   accent text,
+  media_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.tournaments add column if not exists media_url text;
 
 create table if not exists public.teams (
   id text primary key,
