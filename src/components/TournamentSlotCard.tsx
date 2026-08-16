@@ -90,11 +90,11 @@ export function TournamentSlotCard({
 
       {/* Media Image Banner if uploaded */}
       {tournament.mediaUrl ? (
-        <div className="my-4 overflow-hidden rounded-lg border border-sky-500/20">
+        <div className="my-4 overflow-hidden rounded-lg border border-sky-500/30 bg-black p-2">
           <img
             src={tournament.mediaUrl}
             alt={tournament.name}
-            className="h-44 w-full object-cover transition duration-300 hover:scale-105"
+            className="max-h-[30rem] w-full object-contain mx-auto rounded"
           />
         </div>
       ) : null}

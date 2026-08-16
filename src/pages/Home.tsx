@@ -116,11 +116,11 @@ function NormalTournamentCard({
       <div>
         {/* Media Image Banner if uploaded by admin */}
         {tournament.mediaUrl ? (
-          <div className="relative mb-4 overflow-hidden border border-sky-400/20 rounded-lg max-h-52">
+          <div className="relative mb-4 overflow-hidden border border-sky-400/30 rounded-lg bg-black p-1">
             <img
               src={tournament.mediaUrl}
               alt={tournament.name}
-              className="h-48 w-full object-cover transition duration-300 group-hover:scale-105"
+              className="max-h-72 w-full object-contain mx-auto rounded"
             />
           </div>
         ) : null}
