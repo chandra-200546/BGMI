@@ -1,12 +1,101 @@
-import { motion } from "framer-motion";
-import { Clock, KeyRound, LogOut, User } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Clock, KeyRound, LogOut, ShieldAlert, User, Trophy } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../lib/auth-context";
-import { Section } from "../lib/shared-ui";
+import { useAuth, type RegisteredChallenge } from "../lib/auth-context";
+import { isSupabaseConfigured, supabase } from "../lib/supabase";
+import { Section, usePlatformData } from "../lib/shared-ui";
 
 export function DashboardPage() {
   const { user, userChallenges, logout } = useAuth();
+  const { data: platformData } = usePlatformData();
   const navigate = useNavigate();
+
+  const [dbChallenges, setDbChallenges] = useState<RegisteredChallenge[]>([]);
+  const [loadingDb, setLoadingDb] = useState(false);
+
+  // Check if there are any active / available tournaments to register for
+  const availableTournaments = (platformData?.tournaments ?? []).filter(
+    (t) => t.status !== "Completed" && t.status !== "FINISHED"
+  );
+  const hasAvailableChallenge = availableTournaments.length > 0;
+
+  // Real-time synchronization of user's registered challenges from Supabase database
+  useEffect(() => {
+    if (!user?.email || !isSupabaseConfigured()) return;
+
+    let isMounted = true;
+    async function fetchUserRegistrations() {
+      setLoadingDb(true);
+      try {
+        const { data: submissions, error } = await supabase
+          .from("registration_submissions")
+          .select("*")
+          .eq("captain_email", user.email);
+
+        if (!error && submissions && isMounted) {
+          const mapped: RegisteredChallenge[] = submissions.map((sub) => {
+            let playerList: string[] = [];
+            if (Array.isArray(sub.players)) playerList = sub.players.map(String);
+            else if (typeof sub.players === "string") {
+              try {
+                const parsed = JSON.parse(sub.players) as unknown;
+                playerList = Array.isArray(parsed) ? parsed.map(String) : sub.players.split(",");
+              } catch {
+                playerList = sub.players.split(",");
+              }
+            }
+
+            // Find matching tournament from platformData
+            const tMatch = platformData.tournaments.find((t) => t.id === sub.tournament_id);
+
+            return {
+              id: sub.id,
+              tournamentId: sub.tournament_id || "t1",
+              tournamentName: tMatch?.name || "BGMI Championship Challenge",
+              teamName: sub.team_name,
+              captainName: sub.captain_name,
+              captainEmail: sub.captain_email,
+              bgmiUid: sub.bgmi_uid,
+              players: playerList,
+              status: (sub.status as RegisteredChallenge["status"]) || "UNDER_REVIEW",
+              paymentStatus: sub.payment_file_name ? "PAID" : "PENDING_VERIFICATION",
+              entryFee: tMatch?.fee || "₹500",
+              registeredAt: sub.created_at,
+              matchTime: tMatch?.starts || "Matches Scheduled Today",
+              roomDetails: tMatch
+                ? { roomId: (tMatch as any).roomId, password: (tMatch as any).roomPassword }
+                : undefined,
+            };
+          });
+          setDbChallenges(mapped);
+        }
+      } catch (err) {
+        console.warn("Could not sync user DB registrations:", err);
+      } finally {
+        if (isMounted) setLoadingDb(false);
+      }
+    }
+
+    void fetchUserRegistrations();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.email, platformData]);
+
+  // Combine DB challenges and local state challenges (avoiding duplicates)
+  const allUserChallenges = [...dbChallenges];
+  userChallenges.forEach((localCh) => {
+    if (
+      !allUserChallenges.some(
+        (dbCh) =>
+          dbCh.id === localCh.id ||
+          (dbCh.teamName === localCh.teamName && dbCh.tournamentId === localCh.tournamentId)
+      )
+    ) {
+      allUserChallenges.push(localCh);
+    }
+  });
 
   if (!user) {
     return (
@@ -64,14 +153,18 @@ export function DashboardPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              <Link to="/register">
-                <button
-                  type="button"
-                  className="border border-sky-400/60 bg-sky-500/20 px-4 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.18em] text-white transition hover:bg-sky-400 hover:text-black"
-                >
-                  + Register New Squad
-                </button>
-              </Link>
+              {/* Only show Register for Challenge button when an active challenge/tournament exists */}
+              {hasAvailableChallenge ? (
+                <Link to="/register">
+                  <button
+                    type="button"
+                    className="border border-sky-400/60 bg-sky-500/20 px-4 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.18em] text-white transition hover:bg-sky-400 hover:text-black"
+                  >
+                    + Register For Challenge
+                  </button>
+                </Link>
+              ) : null}
+
               <button
                 type="button"
                 onClick={logout}
@@ -87,16 +180,16 @@ export function DashboardPage() {
         <div className="mt-10">
           <div className="flex items-center justify-between border-b border-white/10 pb-4">
             <h4 className="font-display text-3xl font-bold uppercase text-white">
-              My Registered Battles & Challenges ({userChallenges.length})
+              My Registered Battles & Challenges ({allUserChallenges.length})
             </h4>
             <span className="font-mono text-xs uppercase tracking-[0.2em] text-sky-400 font-bold">
-              Live Tracker
+              Live Real-Time Tracker
             </span>
           </div>
 
           <div className="mt-6 grid gap-6">
-            {userChallenges.length > 0 ? (
-              userChallenges.map((challenge) => (
+            {allUserChallenges.length > 0 ? (
+              allUserChallenges.map((challenge) => (
                 <div
                   key={challenge.id}
                   className="border border-sky-400/25 bg-slate-950 p-6 transition hover:border-sky-400"
@@ -111,6 +204,8 @@ export function DashboardPage() {
                           className={`border px-2.5 py-1 font-mono text-[0.65rem] font-bold uppercase tracking-[0.18em] ${
                             challenge.status === "APPROVED"
                               ? "border-green-400/40 bg-green-500/10 text-green-200"
+                              : challenge.status === "REJECTED"
+                              ? "border-red-400/40 bg-red-500/10 text-red-200"
                               : "border-yellow-400/40 bg-yellow-500/10 text-yellow-200"
                           }`}
                         >
@@ -159,8 +254,16 @@ export function DashboardPage() {
                 </div>
               ))
             ) : (
-              <div className="border border-dashed border-white/20 bg-slate-950 p-8 text-center font-mono text-xs uppercase tracking-[0.18em] text-slate-400">
-                No active tournament registrations found for your account. Register your squad above to participate!
+              <div className="border border-dashed border-sky-400/30 bg-slate-950 p-8 text-center">
+                <Trophy className="mx-auto h-12 w-12 text-sky-400/60" />
+                <h4 className="mt-3 font-display text-2xl font-bold uppercase text-white">
+                  No Active Challenges Registered
+                </h4>
+                <p className="mt-1 font-mono text-xs text-slate-400 max-w-md mx-auto">
+                  {hasAvailableChallenge
+                    ? "You haven't registered for any active tournament challenges yet. Click '+ Register For Challenge' above to lock your squad!"
+                    : "There are currently no active challenges open for registration. Check back when an organizer creates a new challenge tournament!"}
+                </p>
               </div>
             )}
           </div>
