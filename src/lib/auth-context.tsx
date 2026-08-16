@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { isSupabaseConfigured, supabase } from "./supabase";
+import { isSupabaseConfigured, supabase, syncClientAuthConfig } from "./supabase";
 
 export type RegisteredChallenge = {
   id: string;
@@ -37,8 +37,8 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const DEMO_USER_KEY = "nexbattles_user_session";
-const DEMO_CHALLENGES_KEY = "nexbattles_user_challenges";
+const DEMO_USER_KEY = "lordsesports_user_session";
+const DEMO_CHALLENGES_KEY = "lordsesports_user_challenges";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(() => {
@@ -53,36 +53,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return saved ? (JSON.parse(saved) as RegisteredChallenge[]) : [];
   });
 
-  // Listen to Supabase auth state if configured
+  // Sync Auth credentials & listen to Supabase auth state
   useEffect(() => {
-    if (!isSupabaseConfigured()) return;
+    let unsubscribe: (() => void) | undefined;
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
+    async function initAuth() {
+      await syncClientAuthConfig();
+
+      // Check current session
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.user) {
+        const u = data.session.user;
         setUser({
-          email: session.user.email ?? "player@gmail.com",
-          name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Esports Player",
-          avatarUrl: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
-          bgmiUid: session.user.user_metadata?.bgmi_uid,
-          teamName: session.user.user_metadata?.team_name,
+          email: u.email ?? "player@gmail.com",
+          name:
+            u.user_metadata?.full_name ||
+            u.user_metadata?.name ||
+            u.email?.split("@")[0] ||
+            "Google Player",
+          avatarUrl: u.user_metadata?.avatar_url || u.user_metadata?.picture,
+          bgmiUid: u.user_metadata?.bgmi_uid,
+          teamName: u.user_metadata?.team_name,
         });
       }
-    });
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser({
-          email: session.user.email ?? "player@gmail.com",
-          name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Esports Player",
-          avatarUrl: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
-          bgmiUid: session.user.user_metadata?.bgmi_uid,
-          teamName: session.user.user_metadata?.team_name,
-        });
-      }
-    });
+      // Listen for auth changes
+      const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session?.user) {
+          const u = session.user;
+          setUser({
+            email: u.email ?? "player@gmail.com",
+            name:
+              u.user_metadata?.full_name ||
+              u.user_metadata?.name ||
+              u.email?.split("@")[0] ||
+              "Google Player",
+            avatarUrl: u.user_metadata?.avatar_url || u.user_metadata?.picture,
+            bgmiUid: u.user_metadata?.bgmi_uid,
+            teamName: u.user_metadata?.team_name,
+          });
+        } else if (_event === "SIGNED_OUT") {
+          setUser(null);
+        }
+      });
+
+      unsubscribe = () => authListener.subscription.unsubscribe();
+    }
+
+    void initAuth();
 
     return () => {
-      authListener.subscription.unsubscribe();
+      if (unsubscribe) unsubscribe();
     };
   }, []);
 
@@ -99,21 +120,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [userChallenges]);
 
   async function loginWithGoogle() {
-    if (isSupabaseConfigured()) {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/dashboard`,
-        },
-      });
-      if (error) throw error;
-    } else {
-      login({
-        email: "player.google@gmail.com",
-        name: "Google Esports Player",
-        bgmiUid: "5482910382",
-        teamName: "Pro Squad",
-      });
+    // 1. Ensure client has live server credentials
+    await syncClientAuthConfig();
+
+    // 2. Perform live Supabase Google OAuth redirect
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`,
+      },
+    });
+
+    if (error) {
+      console.warn("Supabase SDK OAuth notice, triggering server OAuth endpoint:", error.message);
+      window.location.href = "/api/auth/google";
     }
   }
 

@@ -53,6 +53,43 @@ function jsonResponse(payload: unknown, init?: ResponseInit) {
   });
 }
 
+async function handleAuthApi(request: Request): Promise<Response | undefined> {
+  const url = new URL(request.url);
+  if (!url.pathname.startsWith("/api/auth")) return undefined;
+
+  const supabaseUrl =
+    process.env.SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    "";
+  const supabaseAnonKey =
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    "";
+
+  if (url.pathname === "/api/auth/config") {
+    return jsonResponse({
+      supabaseUrl,
+      supabaseAnonKey,
+      isConfigured: Boolean(supabaseUrl && supabaseAnonKey),
+    });
+  }
+
+  if (url.pathname === "/api/auth/google") {
+    if (!supabaseUrl) {
+      return jsonResponse(
+        { error: "SUPABASE_URL is not configured in server environment" },
+        { status: 500 }
+      );
+    }
+    const origin = url.origin;
+    const redirectTo = `${origin}/dashboard`;
+    const targetUrl = `${supabaseUrl.replace(/\/$/, "")}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
+    return Response.redirect(targetUrl, 302);
+  }
+
+  return jsonResponse({ error: "Auth API route not found" }, { status: 404 });
+}
+
 async function handlePublicApi(request: Request): Promise<Response | undefined> {
   const url = new URL(request.url);
   if (!url.pathname.startsWith("/api/public")) return undefined;
@@ -165,6 +202,9 @@ function isH3SwallowedErrorBody(body: string): boolean {
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown): Promise<Response> {
+    const authApiResponse = await handleAuthApi(request);
+    if (authApiResponse) return authApiResponse;
+
     const publicApiResponse = await handlePublicApi(request);
     if (publicApiResponse) return publicApiResponse;
 
