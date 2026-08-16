@@ -365,19 +365,43 @@ function StepFields({
 
   return (
     <FormGrid title="Slot Payment & Proof Upload">
-      <div className="border border-sky-400/40 bg-sky-500/10 p-4 font-mono text-xs text-sky-100">
-        <span className="font-bold uppercase block text-sky-400">UPI Slot Payment</span>
-        Transfer entry fee to UPI ID <span className="font-bold text-white">7996488242@upi</span> or <span className="font-bold text-white">lordsesports@upi</span>, then upload your transaction screenshot below.
+      <div className="border border-sky-400/40 bg-sky-500/10 p-5 font-mono text-xs text-sky-100 rounded-xl space-y-4">
+        <div className="flex items-center justify-between border-b border-sky-400/20 pb-3">
+          <span className="font-bold uppercase text-sky-400 text-sm tracking-wide">
+            Official UPI QR Payment Scanner
+          </span>
+          <span className="font-bold text-white bg-sky-500/20 px-3 py-1 rounded border border-sky-400/40">
+            Lordsesports_in
+          </span>
+        </div>
+        
+        <p className="text-slate-300 leading-relaxed">
+          Scan the official QR code below using <strong>Google Pay, PhonePe, Paytm, or any UPI app</strong> to pay the entry fee, then upload your transaction payment screenshot below:
+        </p>
+
+        {/* Official UPI QR Scanner Image */}
+        <div className="my-2 flex flex-col items-center justify-center border border-sky-400/30 bg-black p-5 rounded-xl shadow-2xl">
+          <img
+            src="/payment-qr.png"
+            alt="Lordsesports_in Official UPI QR Code Scanner"
+            className="h-72 w-auto object-contain rounded-xl border-2 border-sky-400/60 shadow-sky-500/20 shadow-2xl"
+          />
+          <div className="mt-3 font-mono text-xs font-bold text-sky-300 tracking-wider uppercase text-center space-y-1">
+            <div>Official Account: <span className="text-white">Lordsesports_in</span></div>
+            <div>UPI ID: <span className="text-white">7996488242@upi</span></div>
+          </div>
+        </div>
       </div>
+
       <FileField
         label="Payment screenshot receipt upload"
         value={form.paymentFileName ? "Payment screenshot attached ✓" : ""}
         onChange={(event) => setFile("paymentFileName", event)}
       />
       {form.paymentFileName && form.paymentFileName.startsWith("data:image/") ? (
-        <div className="mt-3 border border-sky-400/40 p-2 bg-slate-950">
-          <p className="font-mono text-[0.65rem] uppercase text-sky-400 mb-1">Attached Screenshot Preview:</p>
-          <img src={form.paymentFileName} alt="Payment Screenshot" className="max-h-36 object-contain mx-auto border" />
+        <div className="mt-3 border border-sky-400/40 p-3 bg-slate-950 rounded-lg">
+          <p className="font-mono text-xs uppercase text-sky-400 mb-2 font-bold">Attached Payment Screenshot Preview:</p>
+          <img src={form.paymentFileName} alt="Payment Screenshot" className="max-h-48 object-contain mx-auto border border-sky-400/30 rounded" />
         </div>
       ) : null}
     </FormGrid>
