@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, MemoryRouter, Route, Routes } from "react-router-dom";
 import { Layout } from "./Layout";
 import { HomePage } from "../pages/Home";
 import { WeekendWarPage } from "../pages/WeekendWar";
@@ -14,22 +13,11 @@ import { DashboardPage } from "../pages/Dashboard";
 import { TermsPage, PrivacyPage, ContactPage, AboutPage } from "../pages/TermsPrivacy";
 
 export function AppRouter() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <Layout>
-        <HomePage />
-      </Layout>
-    );
-  }
+  const isServer = typeof window === "undefined";
+  const RouterComponent = isServer ? MemoryRouter : BrowserRouter;
 
   return (
-    <BrowserRouter>
+    <RouterComponent>
       <Layout>
         <Routes>
           <Route path="/" element={<HomePage />} />
@@ -49,6 +37,6 @@ export function AppRouter() {
           <Route path="*" element={<HomePage />} />
         </Routes>
       </Layout>
-    </BrowserRouter>
+    </RouterComponent>
   );
 }
