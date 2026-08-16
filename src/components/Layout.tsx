@@ -3,16 +3,14 @@ import {
   Gamepad2,
   Headphones,
   LayoutDashboard,
-  LockKeyhole,
   LogIn,
   LogOut,
   MessageCircle,
   Shield,
-  User,
   Volume2,
   VolumeX,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { useAuth, AuthProvider } from "../lib/auth-context";
 import {
@@ -27,13 +25,11 @@ export function AppNav({
   liveLabel,
   muted,
   toggleSound,
-  onOpenAdmin,
   onOpenAuth,
 }: {
   liveLabel: string;
   muted: boolean;
   toggleSound: () => void;
-  onOpenAdmin: () => void;
   onOpenAuth: () => void;
 }) {
   const { user, logout } = useAuth();
@@ -91,17 +87,6 @@ export function AppNav({
           >
             Contact Us
           </NavLink>
-
-          <NavLink
-            to="/admin"
-            className={({ isActive }) =>
-              `flex items-center gap-1.5 border border-sky-400/50 bg-sky-500/10 px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-[0.18em] text-sky-300 transition hover:border-sky-300 hover:bg-sky-500 hover:text-black ${
-                isActive ? "bg-sky-400 text-black border-sky-300 font-extrabold" : ""
-              }`
-            }
-          >
-            <LockKeyhole className="h-3.5 w-3.5" /> Admin Panel
-          </NavLink>
         </nav>
 
         {/* Auth Actions */}
@@ -137,6 +122,15 @@ export function AppNav({
               Login
             </button>
           )}
+
+          <button
+            type="button"
+            aria-label="Toggle interface sound"
+            onClick={toggleSound}
+            className="grid h-10 w-10 place-items-center border border-white/15 bg-white/5 text-slate-200 transition hover:border-sky-300/60 hover:text-sky-200"
+          >
+            {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </button>
         </div>
       </div>
     </header>
@@ -208,11 +202,6 @@ export function Footer() {
                   05. Elite Series Registration
                 </Link>
               </li>
-              <li>
-                <Link to="/admin" className="text-sky-400 font-bold transition hover:text-white">
-                  08. Organizer Admin Panel
-                </Link>
-              </li>
             </ul>
           </div>
 
@@ -240,11 +229,6 @@ export function Footer() {
               <li>
                 <Link to="/about" className="transition hover:text-sky-400">
                   About Us
-                </Link>
-              </li>
-              <li>
-                <Link to="/admin" className="text-sky-400 font-bold transition hover:text-white">
-                  Organizer Command Deck (/admin)
                 </Link>
               </li>
             </ul>
@@ -281,13 +265,38 @@ export function LayoutContent({ children }: { children: ReactNode }) {
   const { data, refetch } = usePlatformData();
   const liveLabel = formatUpdatedAt(data.generatedAt);
 
+  // Secret keystroke detection to open Admin Panel modal when bgmi!@#$% (or vinaygbmi!@#$%^&*) is typed
+  useEffect(() => {
+    let keyBuffer = "";
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key.length === 1) {
+        keyBuffer += event.key;
+      }
+      if (keyBuffer.length > 50) {
+        keyBuffer = keyBuffer.slice(-50);
+      }
+
+      const lower = keyBuffer.toLowerCase();
+      if (
+        lower.includes("bgmi!@#$%") ||
+        lower.includes("vinaygbmi!@#$%^&*") ||
+        lower.includes("bgmi!@#$%^&*")
+      ) {
+        setAdminOpen(true);
+        keyBuffer = "";
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#030712] text-slate-100">
       <AppNav
         liveLabel={liveLabel}
         muted={sound.muted}
         toggleSound={sound.toggle}
-        onOpenAdmin={() => setAdminOpen(true)}
         onOpenAuth={() => setAuthOpen(true)}
       />
       <main className="min-h-[calc(100vh-16rem)]">{children}</main>

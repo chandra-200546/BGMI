@@ -2,7 +2,7 @@ import {
   CalendarDays,
   Crown,
   Flame,
-  LockKeyhole,
+  HelpCircle,
   Shield,
   Swords,
   Trophy,
@@ -83,13 +83,13 @@ const categories = [
   },
   {
     number: "08",
-    title: "Organizer Admin Panel",
-    subtitle: "Management Command Deck",
-    desc: "Announce new tournaments, review squad registration payment screenshots, and manage live Supabase tables.",
-    route: "/admin",
-    badge: "ADMIN DECK",
-    icon: LockKeyhole,
-    highlight: "Management Control",
+    title: "Rules & Support Desk",
+    subtitle: "Fair Play & Contact",
+    desc: "Review official battle-royale rules, emulator policies, support numbers, and organizer contact details.",
+    route: "/terms",
+    badge: "SUPPORT DESK",
+    icon: HelpCircle,
+    highlight: "Official Policies",
   },
 ];
 
@@ -105,7 +105,7 @@ export function HomePage() {
           LordsEsports BGMI Arena
         </h1>
         <p className="mt-2 font-mono text-xs text-slate-400 max-w-2xl">
-          Select a category below to access registered lobbies, dedicated standings, squad registration, or organizer admin controls.
+          Select a category below to access registered lobbies, dedicated standings, squad registration, or official tournament rules.
         </p>
       </div>
 
