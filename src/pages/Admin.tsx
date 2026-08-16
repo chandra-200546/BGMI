@@ -264,23 +264,29 @@ export function AdminPanelModal({
           <p className="font-mono text-xs text-slate-300">
             Enter the official admin passcode to access live challenge management, squad registration reviews, and database tables.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void unlock();
+            }}
+            className="flex flex-col sm:flex-row gap-3"
+          >
             <input
               type="password"
+              autoFocus
               value={adminKey}
               onChange={(e) => setAdminKey(e.target.value)}
               placeholder="Enter admin passcode"
               className="flex-1 border border-sky-400/30 bg-slate-950 px-4 py-3 font-mono text-xs text-white outline-none focus:border-sky-400"
             />
             <button
-              type="button"
-              onClick={() => void unlock()}
+              type="submit"
               disabled={busy}
               className="border border-sky-400 bg-sky-500/20 px-6 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-sky-100 hover:bg-sky-400 hover:text-black transition"
             >
               {busy ? "Verifying..." : "Unlock Deck"}
             </button>
-          </div>
+          </form>
           {status ? (
             <p className="font-mono text-xs text-sky-200 border border-sky-400/30 bg-slate-950 p-3">
               {status}

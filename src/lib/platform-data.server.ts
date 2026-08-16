@@ -267,8 +267,14 @@ export async function validateAdminKey(candidateKey?: unknown) {
   const envAdminPass = process.env.ADMIN_PASSWORD || process.env.VITE_ADMIN_PASSWORD;
   if (envAdminPass && targetKey === envAdminPass.trim()) return true;
 
-  // Official default passcode fallback
-  return targetKey === "vinaygbmi!@#$%^&*";
+  // Official passcode fallback checks
+  const lowerKey = targetKey.toLowerCase();
+  return (
+    lowerKey === "vinaygbmi!@#$%^&*" ||
+    lowerKey === "bgmi!@#$%" ||
+    lowerKey === "vinaygbmi!@#$%" ||
+    lowerKey === "bgmi!@#$%^&*"
+  );
 }
 
 function numberValue(input: unknown, fallback = 0): number {
