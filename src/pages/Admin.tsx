@@ -35,7 +35,7 @@ export function AdminPanelModal({
   const [adminKey, setAdminKey] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [activeTask, setActiveTask] = useState<
-    "tournament" | "announcement" | "match" | "registrationStatus" | "roomCredentials"
+    "tournament" | "announcement" | "match" | "registrationStatus" | "roomCredentials" | "updateTournamentTimings"
   >("tournament");
   const [activeDataTab, setActiveDataTab] = useState<AdminDataTab>("registrations");
   const [snapshot, setSnapshot] = useState<AdminSnapshot | undefined>();
@@ -58,6 +58,7 @@ export function AdminPanelModal({
     registrationDeadline: "",
     maps: "Erangel, Miramar",
     mediaUrl: "",
+    idpTimings: "1:23 PM, 1:54 PM, 2:24 PM, 3:02 PM",
     matchName: "",
     matchMap: "Erangel",
     matchGroup: "Group A",
@@ -290,9 +291,10 @@ export function AdminPanelModal({
       ) : (
         <div className="space-y-6">
           {/* Action Tasks Navigation */}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 font-mono text-[0.68rem] uppercase tracking-[0.14em]">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-6 font-mono text-[0.68rem] uppercase tracking-[0.14em]">
             {[
               { id: "tournament", label: "Create Challenge" },
+              { id: "updateTournamentTimings", label: "Edit IDP Timings" },
               { id: "announcement", label: "Broadcast News" },
               { id: "match", label: "Schedule Match" },
               { id: "registrationStatus", label: "Queue Manager" },
@@ -303,7 +305,13 @@ export function AdminPanelModal({
                 type="button"
                 onClick={() =>
                   setActiveTask(
-                    task.id as "tournament" | "announcement" | "match" | "registrationStatus" | "roomCredentials",
+                    task.id as
+                      | "tournament"
+                      | "announcement"
+                      | "match"
+                      | "registrationStatus"
+                      | "roomCredentials"
+                      | "updateTournamentTimings",
                   )
                 }
                 className={`border p-3 text-center transition ${
@@ -555,6 +563,15 @@ function AdminTaskFields({
             placeholder="Erangel, Miramar, Sanhok"
           />
         </label>
+        <label className="field-shell">
+          IDP Match Timings (Comma-separated)
+          <input
+            type="text"
+            value={String(form.idpTimings)}
+            onChange={(e) => updateField("idpTimings", e.target.value)}
+            placeholder="1:23 PM, 1:54 PM, 2:24 PM, 3:02 PM"
+          />
+        </label>
         
         {/* Tournament Media (Poster / Banner Image Upload) */}
         <label className="field-shell md:col-span-2">
@@ -593,6 +610,43 @@ function AdminTaskFields({
             />
           </div>
         ) : null}
+      </div>
+    );
+  }
+
+  if (activeTask === "updateTournamentTimings") {
+    return (
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="field-shell">
+          Select Challenge / Tournament
+          <select
+            value={String(form.tournamentId)}
+            onChange={(e) => {
+              const selectedTid = e.target.value;
+              updateField("tournamentId", selectedTid);
+              const found = tournaments.find((t) => t.id === selectedTid);
+              if (found && found.idpTimings) {
+                updateField("idpTimings", found.idpTimings);
+              }
+            }}
+          >
+            <option value="">Select Tournament</option>
+            {tournaments.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field-shell">
+          IDP Match Timings (Comma-separated)
+          <input
+            type="text"
+            value={String(form.idpTimings)}
+            onChange={(e) => updateField("idpTimings", e.target.value)}
+            placeholder="e.g. 1:23 PM, 1:54 PM, 2:24 PM, 3:02 PM"
+          />
+        </label>
       </div>
     );
   }

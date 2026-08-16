@@ -41,6 +41,7 @@ type SupabaseTournament = {
   phase: string | null;
   accent: string | null;
   media_url?: string | null;
+  idp_timings?: string | null;
   room_id?: string | null;
   room_password?: string | null;
 };
@@ -482,8 +483,19 @@ export async function runAdminCommand(payload: unknown) {
       phase: "Registration",
       accent: "from-sky-400 to-blue-500",
       media_url: command.mediaUrl?.trim() || null,
+      idp_timings: command.idpTimings?.trim() || null,
     });
     return { id, action: command.action, status: "created" };
+  }
+
+  if (command.action === "updateTournamentTimings") {
+    const id = command.tournamentId?.trim();
+    if (!id) throw new Error("Tournament selection is required");
+    await supabasePatch("tournaments", id, {
+      idp_timings: command.idpTimings?.trim() || null,
+      updated_at: new Date().toISOString(),
+    });
+    return { id, action: command.action, status: "updated" };
   }
 
   if (command.action === "match") {
@@ -666,6 +678,7 @@ async function getSupabasePlatformData(): Promise<PlatformData | undefined> {
     phase: row.phase ?? "League",
     accent: row.accent ?? accentClasses[index % accentClasses.length],
     mediaUrl: row.media_url ?? undefined,
+    idpTimings: row.idp_timings ?? undefined,
   }));
 
   const userTeams = safeTeamRows.filter((row) => row && (!row.tournament_id || !seedIds.has(row.tournament_id)));

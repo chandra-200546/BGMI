@@ -18,6 +18,7 @@ create table if not exists public.tournaments (
 );
 
 alter table public.tournaments add column if not exists media_url text;
+alter table public.tournaments add column if not exists idp_timings text;
 
 create table if not exists public.teams (
   id text primary key,

@@ -29,8 +29,10 @@ export function TournamentSlotCard({
         .map((m) => m.trim())
         .filter(Boolean);
 
-  // Default timing slots if not provided
-  const timings = ["1:23 PM", "1:54 PM", "2:24 PM", "3:02 PM"];
+  // Timing slots from tournament or default fallback
+  const timings = tournament.idpTimings
+    ? tournament.idpTimings.split(",").map((t) => t.trim()).filter(Boolean)
+    : ["1:23 PM", "1:54 PM", "2:24 PM", "3:02 PM"];
 
   function handleSlotBooking() {
     if (typeof window !== "undefined") {

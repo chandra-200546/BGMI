@@ -15,6 +15,7 @@ export type Tournament = {
   phase: string;
   accent: string;
   mediaUrl?: string;
+  idpTimings?: string;
 };
 
 export type Team = {
