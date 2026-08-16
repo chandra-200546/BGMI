@@ -1,6 +1,7 @@
 import { ChevronRight, Crown, Shield, Skull, Swords, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AnimatedNumber, HudMetric, MagneticButton, Section, usePlatformData } from "../lib/shared-ui";
+import { TournamentSlotCard } from "../components/TournamentSlotCard";
 
 const prizeTiers = [
   { label: "Champion Squad", split: "55%", badge: "WWCD Winner", icon: Crown },
@@ -21,43 +22,8 @@ export function WeekendWarPage() {
         </p>
 
         {activeTournament ? (
-          <div className="mt-10 grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
-            <div className="hud-panel p-6 border border-sky-400/30 bg-slate-950">
-              {activeTournament.mediaUrl ? (
-                <div className="mb-6 overflow-hidden border border-sky-400/30 bg-black">
-                  <img
-                    src={activeTournament.mediaUrl}
-                    alt={activeTournament.name}
-                    className="h-48 w-full object-cover"
-                  />
-                </div>
-              ) : null}
-
-              <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                <span className="font-mono text-xs uppercase tracking-[0.24em] text-sky-400 font-bold">
-                  Official Championship Format
-                </span>
-                <Zap className="h-6 w-6 text-sky-400" />
-              </div>
-              <h3 className="mt-4 font-display text-4xl font-bold uppercase text-white">
-                {activeTournament.name}
-              </h3>
-
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                <HudMetric label="Total Prize" value={activeTournament.prize} />
-                <HudMetric label="Entry Fee" value={activeTournament.fee} />
-                <HudMetric label="Format" value={activeTournament.mode} />
-                <HudMetric label="Map Pool" value={activeTournament.map || "Erangel / Miramar"} />
-              </div>
-
-              <div className="mt-8">
-                <Link to="/register">
-                  <MagneticButton className="w-full justify-center">
-                    Register Squad for Weekend War <ChevronRight className="h-5 w-5" />
-                  </MagneticButton>
-                </Link>
-              </div>
-            </div>
+          <div className="mt-10 space-y-6">
+            <TournamentSlotCard tournament={activeTournament} />
 
             <div className="grid gap-4 md:grid-cols-3">
               {prizeTiers.map((tier) => {

@@ -14,6 +14,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth-context";
 import { usePlatformData } from "../lib/shared-ui";
 import type { Tournament } from "../lib/platform-types";
+import { TournamentSlotCard } from "../components/TournamentSlotCard";
 
 const categories = [
   {
@@ -132,75 +133,12 @@ export function HomePage() {
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6">
             {tournaments.map((t) => (
-              <div
+              <TournamentSlotCard
                 key={t.id}
-                className="group relative flex flex-col justify-between border border-sky-400/30 bg-slate-950 p-5 transition hover:border-sky-400 hover:bg-sky-950/20"
-              >
-                <div>
-                  {/* Media Image Banner if uploaded by admin */}
-                  {t.mediaUrl ? (
-                    <div className="relative mb-4 overflow-hidden border border-sky-400/20 max-h-48">
-                      <img
-                        src={t.mediaUrl}
-                        alt={t.name}
-                        className="h-44 w-full object-cover transition duration-300 group-hover:scale-105"
-                      />
-                    </div>
-                  ) : null}
-
-                  {/* Badges & Status */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
-                    <span className="border border-sky-400/40 bg-sky-500/10 px-2.5 py-0.5 font-mono text-[0.62rem] font-bold uppercase tracking-[0.18em] text-sky-300">
-                      {t.status}
-                    </span>
-                    <span className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-green-400">
-                      Prize: {t.prize}
-                    </span>
-                  </div>
-
-                  {/* Tournament Title & Details */}
-                  <h3 className="mt-4 font-display text-3xl font-bold uppercase leading-tight text-white group-hover:text-sky-300">
-                    {t.name}
-                  </h3>
-
-                  <div className="mt-3 space-y-1.5 font-mono text-xs text-slate-300">
-                    <div className="flex justify-between border-b border-white/5 pb-1">
-                      <span className="text-slate-400">Entry Fee:</span>
-                      <span className="font-bold text-white">{t.fee}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-white/5 pb-1">
-                      <span className="text-slate-400">Slots Filled:</span>
-                      <span className="font-bold text-sky-300">
-                        {t.registered} / {t.slots} Squads
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-b border-white/5 pb-1">
-                      <span className="text-slate-400">Map & Mode:</span>
-                      <span className="font-bold text-slate-200">
-                        {t.map} ({t.mode})
-                      </span>
-                    </div>
-                    <div className="flex justify-between pb-1">
-                      <span className="text-slate-400">Starts At:</span>
-                      <span className="font-bold text-slate-200">{t.starts}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Primary Action CTA */}
-                <div className="mt-6 border-t border-white/10 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => handleJoinChallenge(t)}
-                    className="flex w-full items-center justify-center gap-2 border border-sky-400 bg-sky-500/20 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-white transition hover:bg-sky-400 hover:text-black"
-                  >
-                    <SwordsIcon className="h-4 w-4" />
-                    {user ? "Join Challenge →" : "Login & Join Challenge →"}
-                  </button>
-                </div>
-              </div>
+                tournament={t}
+              />
             ))}
           </div>
         </section>
