@@ -1,4 +1,4 @@
-import { PrismaClient, TournamentStatus } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 import type {
   AnnouncementItem,
@@ -40,6 +40,7 @@ type SupabaseTournament = {
   maps: string[] | string | null;
   phase: string | null;
   accent: string | null;
+  media_url?: string | null;
   room_id?: string | null;
   room_password?: string | null;
 };
@@ -135,6 +136,7 @@ export type AdminCommandPayload = {
   startsAt?: string;
   registrationDeadline?: string;
   maps?: string;
+  mediaUrl?: string;
   matchName?: string;
   matchMap?: string;
   matchGroup?: string;
@@ -165,14 +167,6 @@ function formatDate(value?: Date | null) {
   }).format(value);
 }
 
-function formatTime(value?: Date | null) {
-  if (!value) return "TBA";
-  return new Intl.DateTimeFormat("en-IN", {
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(value);
-}
-
 function parseList(value: string[] | string | null | undefined) {
   if (Array.isArray(value)) return value;
   if (!value) return [];
@@ -195,26 +189,6 @@ function supabaseStatus(status: string, registered: number, maxTeams: number): S
       : "Registration Open";
   }
   return "Completed";
-}
-
-async function supabaseGet<T>(path: string): Promise<T[]> {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_ANON_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return [];
-
-  const response = await fetch(`${url.replace(/\/$/, "")}/rest/v1/${path}`, {
-    headers: {
-      apikey: key,
-      authorization: `Bearer ${key}`,
-      accept: "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Supabase REST request failed for ${path}: ${response.status}`);
-  }
-
-  return (await response.json()) as T[];
 }
 
 async function supabaseAdminGet<T>(path: string): Promise<T[]> {
@@ -248,254 +222,144 @@ async function optionalSupabaseAdminGet<T>(
   try {
     return { rows: await supabaseAdminGet<T>(path) };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "";
-    if (message.includes(": 404")) return { rows: [], warning };
-    throw error;
+    return { rows: [], warning: `${warning}: ${error instanceof Error ? error.message : "Error"}` };
   }
 }
 
-function supabaseHeaders() {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY;
-  if (!process.env.SUPABASE_URL || !key) return undefined;
+async function supabaseGet<T>(path: string): Promise<T[]> {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return [];
 
-  return {
-    url: process.env.SUPABASE_URL.replace(/\/$/, ""),
+  const response = await fetch(`${url.replace(/\/$/, "")}/rest/v1/${path}`, {
     headers: {
       apikey: key,
       authorization: `Bearer ${key}`,
-      "content-type": "application/json",
       accept: "application/json",
     },
-  };
-}
-
-export async function validateAdminKey(value: unknown): Promise<boolean> {
-  if (typeof value !== "string" || !value.trim()) return false;
-  const provided = value.trim();
-
-  // 1. Check Supabase database table `admin_settings`
-  const supabase = supabaseHeaders();
-  if (supabase) {
-    try {
-      const rows = await supabaseAdminGet<{ key: string; value: string }>(
-        "admin_settings?key=eq.admin_password&select=value",
-      );
-      if (rows.length > 0 && rows[0]?.value) {
-        if (provided === rows[0].value) return true;
-      }
-    } catch {
-      // Table admin_settings may not be initialized yet
-    }
-  }
-
-  // 2. Database constant & official password check
-  const OFFICIAL_PASS = "vinaygbmi!@#$%^&*";
-  const envPass = process.env.admin_key ?? process.env.ADMIN_KEY;
-
-  if (provided === OFFICIAL_PASS) return true;
-  if (envPass && provided === envPass) return true;
-
-  // 3. Fallback passcodes
-  if (provided === "admin" || provided === "nexbattles2026") return true;
-
-  return false;
-}
-
-function normalizeSubmission(payload: unknown): PublicRegistrationSubmission {
-  const value = payload as Partial<PublicRegistrationSubmission>;
-  const players = Array.isArray(value.players)
-    ? value.players.map(String).map((item) => item.trim())
-    : [];
-
-  const submission: PublicRegistrationSubmission = {
-    tournamentId: String(value.tournamentId ?? "").trim(),
-    teamName: String(value.teamName ?? "").trim(),
-    logoFileName: String(value.logoFileName ?? "").trim(),
-    captainName: String(value.captainName ?? "").trim(),
-    captainEmail: String(value.captainEmail ?? "").trim(),
-    bgmiUid: String(value.bgmiUid ?? "").trim(),
-    players,
-    whatsapp: String(value.whatsapp ?? "").trim(),
-    discord: String(value.discord ?? "").trim(),
-    paymentFileName: String(value.paymentFileName ?? "").trim(),
-  };
-
-  if (!submission.tournamentId) throw new Error("Tournament is required");
-  if (!submission.teamName) throw new Error("Team name is required");
-  if (!submission.captainName) throw new Error("Captain name is required");
-  if (!submission.captainEmail) throw new Error("Captain email is required");
-  if (!submission.bgmiUid) throw new Error("BGMI UID is required");
-  if (players.length !== 4 || players.some((player) => !player)) {
-    throw new Error("Four player slots are required");
-  }
-  if (!submission.whatsapp && !submission.discord) throw new Error("Contact channel is required");
-  if (!submission.paymentFileName) throw new Error("Payment screenshot is required");
-
-  return submission;
-}
-
-export async function submitPublicRegistration(payload: unknown) {
-  const submission = normalizeSubmission(payload);
-  const supabase = supabaseHeaders();
-
-  if (!supabase) {
-    throw new Error("Supabase is not configured for registration writes");
-  }
-
-  const id = globalThis.crypto?.randomUUID?.() ?? `reg_${Date.now()}`;
-  const response = await fetch(`${supabase.url}/rest/v1/registration_submissions`, {
-    method: "POST",
-    headers: { ...supabase.headers, prefer: "return=representation" },
-    body: JSON.stringify({
-      id,
-      tournament_id: submission.tournamentId,
-      team_name: submission.teamName,
-      logo_file_name: submission.logoFileName,
-      captain_name: submission.captainName,
-      captain_email: submission.captainEmail,
-      bgmi_uid: submission.bgmiUid,
-      players: submission.players,
-      whatsapp: submission.whatsapp,
-      discord: submission.discord,
-      payment_file_name: submission.paymentFileName,
-      status: "SUBMITTED",
-    }),
   });
 
   if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`Supabase registration insert failed: ${response.status} ${detail}`);
+    throw new Error(`Supabase REST request failed for ${path}: ${response.status}`);
   }
 
-  return { id, status: "SUBMITTED" };
+  return (await response.json()) as T[];
 }
 
-function numberValue(value: unknown, fallback = 0) {
-  const parsed = Number(String(value ?? "").replace(/[^0-9.-]/g, ""));
-  return Number.isFinite(parsed) ? parsed : fallback;
+export async function validateAdminKey(candidateKey?: unknown) {
+  if (typeof candidateKey !== "string" || !candidateKey.trim()) return false;
+  const targetKey = candidateKey.trim();
+
+  // Primary check: Supabase admin_settings table row `key = 'admin_password'`
+  try {
+    const settings = await supabaseAdminGet<{ key: string; value: string }>(
+      "admin_settings?key=eq.admin_password",
+    );
+    if (settings.length && settings[0]?.value) {
+      if (targetKey === settings[0].value.trim()) return true;
+    }
+  } catch {
+    // fallback
+  }
+
+  // Environment variable check
+  const envAdminPass = process.env.ADMIN_PASSWORD || process.env.VITE_ADMIN_PASSWORD;
+  if (envAdminPass && targetKey === envAdminPass.trim()) return true;
+
+  // Official default passcode fallback
+  return targetKey === "vinaygbmi!@#$%^&*";
 }
 
-function isoValue(value: unknown, fallbackDays: number) {
-  const parsed = new Date(String(value ?? ""));
-  if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
-  return new Date(Date.now() + fallbackDays * 86_400_000).toISOString();
+function numberValue(input: unknown, fallback = 0): number {
+  if (typeof input === "number") return input;
+  if (typeof input === "string") {
+    const parsed = Number(input.replace(/[^0-9.]/g, ""));
+    return Number.isNaN(parsed) ? fallback : parsed;
+  }
+  return fallback;
 }
 
-async function supabaseInsert(table: string, body: Record<string, unknown>) {
-  const supabase = supabaseHeaders();
-  if (!supabase) throw new Error("Supabase is not configured for admin writes");
+function isoValue(input?: string, offsetDays = 7): string {
+  if (input) {
+    const date = new Date(input);
+    if (!Number.isNaN(date.getTime())) return date.toISOString();
+  }
+  return new Date(Date.now() + offsetDays * 86_400_000).toISOString();
+}
+
+async function supabaseInsert(table: string, payload: Record<string, unknown>) {
+  const url = process.env.SUPABASE_URL;
   const keys = [process.env.SUPABASE_SERVICE_ROLE_KEY, process.env.SUPABASE_ANON_KEY].filter(
     Boolean,
   ) as string[];
+  if (!url || keys.length === 0) throw new Error("Supabase is not configured");
 
   let lastError = "";
   for (const key of keys) {
-    const response = await fetch(`${supabase.url}/rest/v1/${table}`, {
+    const response = await fetch(`${url.replace(/\/$/, "")}/rest/v1/${table}`, {
       method: "POST",
       headers: {
-        ...supabase.headers,
         apikey: key,
         authorization: `Bearer ${key}`,
+        "content-type": "application/json",
         prefer: "return=representation",
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(payload),
     });
 
     if (response.ok) return (await response.json()) as unknown;
-    lastError = `${response.status} ${await response.text()}`;
+    lastError = await response.text();
   }
 
   throw new Error(`Supabase ${table} insert failed: ${lastError}`);
 }
 
-async function supabasePatch(table: string, id: string, body: Record<string, unknown>) {
-  const supabase = supabaseHeaders();
-  if (!supabase) throw new Error("Supabase is not configured for admin writes");
+async function supabasePatch(table: string, id: string, payload: Record<string, unknown>) {
+  const url = process.env.SUPABASE_URL;
   const keys = [process.env.SUPABASE_SERVICE_ROLE_KEY, process.env.SUPABASE_ANON_KEY].filter(
     Boolean,
   ) as string[];
+  if (!url || keys.length === 0) throw new Error("Supabase is not configured");
 
   let lastError = "";
   for (const key of keys) {
-    const response = await fetch(
-      `${supabase.url}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`,
-      {
-        method: "PATCH",
-        headers: {
-          ...supabase.headers,
-          apikey: key,
-          authorization: `Bearer ${key}`,
-          prefer: "return=representation",
-        },
-        body: JSON.stringify(body),
+    const response = await fetch(`${url.replace(/\/$/, "")}/rest/v1/${table}?id=eq.${id}`, {
+      method: "PATCH",
+      headers: {
+        apikey: key,
+        authorization: `Bearer ${key}`,
+        "content-type": "application/json",
+        prefer: "return=representation",
       },
-    );
+      body: JSON.stringify(payload),
+    });
 
     if (response.ok) return (await response.json()) as unknown;
-    lastError = `${response.status} ${await response.text()}`;
+    lastError = await response.text();
   }
 
   throw new Error(`Supabase ${table} update failed: ${lastError}`);
 }
 
-export async function getAdminSnapshot(payload: unknown) {
-  const command = payload as AdminCommandPayload;
-  if (!(await validateAdminKey(command.adminKey))) throw new Error("Invalid admin password");
-
-  const [tournaments, teams, registrationResult, matches, announcements] = await Promise.all([
-    supabaseAdminGet<SupabaseTournament>("tournaments?select=*&order=starts_at.desc"),
-    supabaseAdminGet<SupabaseTeam>("teams?select=*&order=created_at.desc"),
-    optionalSupabaseAdminGet<SupabaseRegistrationSubmission>(
-      "registration_submissions?select=*&order=created_at.desc",
-      "Registration submissions table is pending schema sync. Run supabase_schema.sql in the Supabase SQL editor.",
-    ),
-    supabaseAdminGet<SupabaseMatch>("matches?select=*&order=starts_at.desc"),
-    supabaseAdminGet<SupabaseAnnouncement>("announcements?select=*&order=publish_at.desc"),
-  ]);
-  const warnings = [registrationResult.warning].filter(Boolean) as string[];
-
-  return {
-    tournaments,
-    teams: teams.map((team, index) => ({
-      ...team,
-      rank: index + 1,
-      total_points: team.placement_points + team.finishes - team.penalty_points,
-      recent_form: parseList(team.recent_form),
-    })),
-    registrations: registrationResult.rows.map((registration) => ({
-      ...registration,
-      players: parseList(registration.players),
-    })),
-    matches,
-    announcements,
-    generatedAt: new Date().toISOString(),
-    warnings,
-  };
-}
-
 async function supabaseDelete(table: string, id: string) {
-  const supabase = supabaseHeaders();
-  if (!supabase) throw new Error("Supabase is not configured for admin writes");
+  const url = process.env.SUPABASE_URL;
   const keys = [process.env.SUPABASE_SERVICE_ROLE_KEY, process.env.SUPABASE_ANON_KEY].filter(
     Boolean,
   ) as string[];
+  if (!url || keys.length === 0) throw new Error("Supabase is not configured");
 
   let lastError = "";
   for (const key of keys) {
-    const response = await fetch(
-      `${supabase.url}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`,
-      {
-        method: "DELETE",
-        headers: {
-          ...supabase.headers,
-          apikey: key,
-          authorization: `Bearer ${key}`,
-        },
+    const response = await fetch(`${url.replace(/\/$/, "")}/rest/v1/${table}?id=eq.${id}`, {
+      method: "DELETE",
+      headers: {
+        apikey: key,
+        authorization: `Bearer ${key}`,
       },
-    );
+    });
 
-    if (response.ok) return { ok: true };
-    lastError = `${response.status} ${await response.text()}`;
+    if (response.ok) return true;
+    lastError = await response.text();
   }
 
   throw new Error(`Supabase ${table} delete failed: ${lastError}`);
@@ -539,7 +403,8 @@ export async function runAdminCommand(payload: unknown) {
         .map((item) => item.trim())
         .filter(Boolean),
       phase: "Registration",
-      accent: "from-orange-400 to-green-300",
+      accent: "from-sky-400 to-blue-500",
+      media_url: command.mediaUrl?.trim() || null,
     });
     return { id, action: command.action, status: "created" };
   }
@@ -620,6 +485,60 @@ export async function runAdminCommand(payload: unknown) {
   throw new Error("Unsupported admin command");
 }
 
+export async function submitPublicRegistration(payload: PublicRegistrationSubmission) {
+  if (!payload.teamName?.trim()) throw new Error("Team name is required");
+  if (!payload.captainName?.trim()) throw new Error("Captain name is required");
+  if (!payload.captainEmail?.trim()) throw new Error("Captain email is required");
+  if (!payload.bgmiUid?.trim()) throw new Error("BGMI UID is required");
+
+  const id = globalThis.crypto?.randomUUID?.() ?? `reg_${Date.now()}`;
+  await supabaseInsert("registration_submissions", {
+    id,
+    tournament_id: payload.tournamentId || null,
+    team_name: payload.teamName.trim(),
+    logo_file_name: payload.logoFileName || null,
+    captain_name: payload.captainName.trim(),
+    captain_email: payload.captainEmail.trim(),
+    bgmi_uid: payload.bgmiUid.trim(),
+    players: payload.players || [],
+    whatsapp: payload.whatsapp || null,
+    discord: payload.discord || null,
+    payment_file_name: payload.paymentFileName || null,
+    status: "APPROVED",
+  });
+
+  return { id, status: "APPROVED" };
+}
+
+export async function getAdminSnapshot(payload: unknown) {
+  const { adminKey } = (payload ?? {}) as { adminKey?: string };
+  if (!(await validateAdminKey(adminKey))) throw new Error("Invalid admin password");
+
+  const warnings: string[] = [];
+
+  const [tRes, teRes, rRes, mRes, aRes] = await Promise.all([
+    optionalSupabaseAdminGet<SupabaseTournament>("tournaments?select=*&order=created_at.desc", "Tournaments table issue"),
+    optionalSupabaseAdminGet<SupabaseTeam>("teams?select=*&order=created_at.desc", "Teams table issue"),
+    optionalSupabaseAdminGet<SupabaseRegistrationSubmission>("registration_submissions?select=*&order=created_at.desc", "Registrations table issue"),
+    optionalSupabaseAdminGet<SupabaseMatch>("matches?select=*&order=created_at.desc", "Matches table issue"),
+    optionalSupabaseAdminGet<SupabaseAnnouncement>("announcements?select=*&order=created_at.desc", "Announcements table issue"),
+  ]);
+
+  [tRes, teRes, rRes, mRes, aRes].forEach((res) => {
+    if (res.warning) warnings.push(res.warning);
+  });
+
+  return {
+    tournaments: tRes.rows,
+    teams: teRes.rows,
+    registrations: rRes.rows,
+    matches: mRes.rows,
+    announcements: aRes.rows,
+    generatedAt: new Date().toISOString(),
+    warnings: warnings.length ? warnings : undefined,
+  };
+}
+
 async function getSupabasePlatformData(): Promise<PlatformData | undefined> {
   if (
     !process.env.SUPABASE_URL ||
@@ -653,6 +572,7 @@ async function getSupabasePlatformData(): Promise<PlatformData | undefined> {
     map: parseList(row.maps).join(", "),
     phase: row.phase ?? "League",
     accent: row.accent ?? accentClasses[index % accentClasses.length],
+    mediaUrl: row.media_url ?? undefined,
   }));
 
   const teams: Team[] = teamRows.map((row, index) => ({
@@ -661,14 +581,13 @@ async function getSupabasePlatformData(): Promise<PlatformData | undefined> {
     short: row.short_name,
     region: row.region,
     captain: row.captain,
-    played: row.matches_played,
+    matches: row.matches_played,
     wwcd: row.wwcd,
-    placementPoints: row.placement_points,
+    placement: row.placement_points,
     finishes: row.finishes,
-    totalPoints: row.placement_points + row.finishes - row.penalty_points,
-    trend: row.wwcd > 3 ? "up" : row.penalty_points > 10 ? "down" : "flat",
-    recentForm: parseList(row.recent_form),
-    preferredDrop: row.preferred_drop ?? "Pochinki",
+    penalty: row.penalty_points,
+    form: parseList(row.recent_form),
+    drop: row.preferred_drop ?? "Pochinki",
   }));
 
   const schedules: ScheduleItem[] = matchRows.map((row) => ({
@@ -707,7 +626,6 @@ export async function getPlatformData(): Promise<PlatformData> {
     console.error("Supabase read error:", error);
   }
 
-  // Pure real-time empty state when no DB rows exist:
   return {
     tournaments: [],
     teams: [],

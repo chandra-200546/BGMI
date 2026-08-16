@@ -1,6 +1,6 @@
 import { AnimatePresence } from "framer-motion";
-import { CheckCircle, Eye, LockKeyhole, RefreshCw, SlidersHorizontal, Trash2, X, XCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { CheckCircle, Eye, ImagePlus, LockKeyhole, RefreshCw, SlidersHorizontal, Trash2, X, XCircle } from "lucide-react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import {
   formatUpdatedAt,
   usePlatformData,
@@ -62,6 +62,7 @@ export function AdminPanelModal({
     startsAt: "",
     registrationDeadline: "",
     maps: "Erangel, Miramar",
+    mediaUrl: "",
     matchName: "",
     matchMap: "Erangel",
     matchGroup: "Group A",
@@ -80,7 +81,6 @@ export function AdminPanelModal({
     }
   }, [data.tournaments, form.tournamentId]);
 
-  // Auto-attempt unlock if adminKey is set
   useEffect(() => {
     if (open && adminKey && !unlocked) {
       void unlockWithKey(adminKey);
@@ -370,14 +370,14 @@ export function AdminPanelModal({
         </div>
       )}
 
-      {/* Payment Screenshot Modal */}
+      {/* Payment Screenshot / Media Modal */}
       <AnimatePresence>
         {selectedScreenshot ? (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
             <div className="relative max-h-[90vh] max-w-3xl overflow-hidden border border-sky-400/60 bg-black p-6">
               <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
-                <h4 className="font-display text-2xl font-bold uppercase text-sky-400">
-                  📸 Payment Screenshot Receipt
+                <h4 className="font-display text-2xl font-bold uppercase text-sky-400 flex items-center gap-2">
+                  <ImagePlus className="h-6 w-6" /> Media Preview
                 </h4>
                 <button
                   type="button"
@@ -390,7 +390,7 @@ export function AdminPanelModal({
               <div className="max-h-[70vh] overflow-auto flex items-center justify-center border border-white/10 bg-slate-950 p-2">
                 <img
                   src={selectedScreenshot}
-                  alt="Payment Receipt Screenshot"
+                  alt="Media Preview"
                   className="max-h-[65vh] w-auto object-contain"
                 />
               </div>
@@ -400,7 +400,7 @@ export function AdminPanelModal({
                   onClick={() => setSelectedScreenshot(null)}
                   className="border border-white/20 bg-white/10 px-5 py-2 font-mono text-xs uppercase text-white hover:bg-white/20"
                 >
-                  Close Receipt
+                  Close Preview
                 </button>
               </div>
             </div>
@@ -555,6 +555,44 @@ function AdminTaskFields({
             placeholder="Erangel, Miramar, Sanhok"
           />
         </label>
+        
+        {/* Tournament Media (Poster / Banner Image Upload) */}
+        <label className="field-shell md:col-span-2">
+          Tournament Banner / Poster Media File (Image Upload)
+          <span className="mt-1 flex items-center justify-between gap-3 border border-sky-400/30 bg-slate-950 px-4 py-3 text-slate-300 cursor-pointer">
+            <span className="truncate text-sky-300 font-bold">
+              {form.mediaUrl ? "Tournament Poster Attached ✓" : "Upload Banner/Poster Image File"}
+            </span>
+            <ImagePlus className="h-4 w-4 text-sky-400" />
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                const file = event.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                  updateField("mediaUrl", reader.result as string);
+                };
+                reader.readAsDataURL(file);
+              }}
+            />
+          </span>
+        </label>
+
+        {form.mediaUrl && String(form.mediaUrl).startsWith("data:image/") ? (
+          <div className="md:col-span-2 border border-sky-400/40 p-2 bg-slate-950">
+            <p className="font-mono text-[0.65rem] uppercase text-sky-400 mb-1">
+              Attached Tournament Media Preview:
+            </p>
+            <img
+              src={String(form.mediaUrl)}
+              alt="Tournament Poster Preview"
+              className="max-h-40 w-auto object-contain mx-auto border"
+            />
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -701,7 +739,7 @@ const tableConfigs: Record<
 > = {
   tournaments: {
     label: "Tournaments",
-    columns: ["id", "name", "mode", "status", "prize_pool", "entry_fee", "registered_teams", "max_teams", "starts_at"],
+    columns: ["id", "name", "mode", "status", "prize_pool", "entry_fee", "media_url", "registered_teams", "max_teams", "starts_at"],
   },
   announcements: {
     label: "Announcements",
@@ -783,21 +821,22 @@ function AdminDatabaseBrowser({
               rows.map((row, index) => {
                 const rowId = String(row.id ?? index);
                 const isReg = activeTab === "registrations";
-                const paymentFile = String(row.payment_file_name ?? "");
 
                 return (
                   <tr key={rowId} className="border-t border-white/10 hover:bg-sky-950/20">
                     {activeConfig.columns.map((column) => {
                       const val = row[column];
-                      if (column === "payment_file_name" && paymentFile) {
+                      const strVal = String(val ?? "");
+
+                      if ((column === "payment_file_name" || column === "media_url") && strVal) {
                         return (
                           <td key={column} className="p-3 align-top">
                             <button
                               type="button"
-                              onClick={() => onOpenScreenshot(paymentFile)}
+                              onClick={() => onOpenScreenshot(strVal)}
                               className="inline-flex items-center gap-1.5 border border-sky-400/50 bg-sky-500/20 px-2.5 py-1 font-mono text-[0.65rem] font-bold uppercase tracking-wider text-sky-100 hover:bg-sky-400 hover:text-black transition"
                             >
-                              <Eye className="h-3.5 w-3.5" /> View Receipt
+                              <Eye className="h-3.5 w-3.5" /> View Media
                             </button>
                           </td>
                         );
@@ -895,7 +934,7 @@ function formatAdminCell(value: unknown) {
   if (value === null || value === undefined || value === "") return "-";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   const str = String(value);
-  if (str.startsWith("data:image/")) return "[Image Screenshot Data]";
+  if (str.startsWith("data:image/")) return "[Image Media Data]";
   return str;
 }
 

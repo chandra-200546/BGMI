@@ -14,6 +14,7 @@ export type Tournament = {
   map: string;
   phase: string;
   accent: string;
+  mediaUrl?: string;
 };
 
 export type Team = {
@@ -32,19 +33,26 @@ export type Team = {
 };
 
 export type ScheduleItem = {
-  match: string;
-  date: string;
-  time: string;
-  map: string;
-  status: string;
-  group: string;
+  id?: string;
+  match?: string;
+  title?: string;
+  startsAt?: string;
+  date?: string;
+  time?: string;
+  map?: string;
+  status?: string;
+  group?: string;
 };
 
 export type AnnouncementItem = {
+  id?: string;
   category: string;
   title: string;
-  state: string;
-  date: string;
+  body?: string;
+  state?: string;
+  date?: string;
+  pinned?: boolean;
+  publishAt?: string;
 };
 
 export type PlatformData = {
@@ -68,5 +76,5 @@ export const emptyPlatformData: PlatformData = {
 };
 
 export function totalPoints(team: Team) {
-  return team.placement + team.finishes - team.penalty;
+  return (team.placement ?? 0) + (team.finishes ?? 0) - (team.penalty ?? 0);
 }

@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS public.tournaments (
     accent TEXT DEFAULT 'from-orange-400 to-green-300',
     room_id TEXT,
     room_password TEXT,
+    media_url TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

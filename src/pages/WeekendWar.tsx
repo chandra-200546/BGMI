@@ -23,6 +23,16 @@ export function WeekendWarPage() {
         {activeTournament ? (
           <div className="mt-10 grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
             <div className="hud-panel p-6">
+              {activeTournament.mediaUrl ? (
+                <div className="mb-6 overflow-hidden border border-sky-400/30 bg-black">
+                  <img
+                    src={activeTournament.mediaUrl}
+                    alt={activeTournament.name}
+                    className="h-48 w-full object-cover"
+                  />
+                </div>
+              ) : null}
+
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
                 <span className="font-mono text-xs uppercase tracking-[0.24em] text-sky-400">
                   Official Championship Format
