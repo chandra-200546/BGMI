@@ -1,9 +1,8 @@
-import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle2, ChevronRight, ImagePlus, ShieldCheck, Trophy, Upload, User } from "lucide-react";
+import { CheckCircle2, ChevronRight, ImagePlus, Trophy } from "lucide-react";
 import { useEffect, useState, type ChangeEvent, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth-context";
-import { MagneticButton, Section, usePlatformData, useSoundDesign } from "../lib/shared-ui";
+import { MagneticButton, Section, usePlatformData } from "../lib/shared-ui";
 import type { Tournament } from "../lib/platform-types";
 
 type RegistrationPayload = {
@@ -19,17 +18,15 @@ type RegistrationPayload = {
   paymentFileName: string;
 };
 
-const registrationSteps = ["Squad", "Captain", "Roster", "Comms", "Proof & Pay"];
+const registrationSteps = ["Squad Profile", "Captain Verification", "4 Player Roster", "Comms Channel", "Proof & Pay"];
 
 export function RegisterPage() {
   const { user, addChallenge } = useAuth();
   const { data } = usePlatformData();
-  const sound = useSoundDesign();
   const navigate = useNavigate();
 
   const tournaments = data.tournaments;
   const [step, setStep] = useState(0);
-  const [shake, setShake] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -90,22 +87,13 @@ export function RegisterPage() {
     return Boolean(form.paymentFileName);
   }
 
-  function failValidation() {
-    setShake(true);
-    window.setTimeout(() => setShake(false), 450);
-  }
-
   async function submit() {
-    if (!isStepValid()) {
-      failValidation();
-      return;
-    }
+    if (!isStepValid()) return;
 
     setSubmitting(true);
     try {
       const selectedTournament = tournaments.find((t) => t.id === form.tournamentId);
 
-      // Record in user context if logged in or default
       addChallenge({
         tournamentId: form.tournamentId,
         tournamentName: selectedTournament?.name ?? "BGMI Scrim Lobby",
@@ -121,7 +109,6 @@ export function RegisterPage() {
         roomDetails: { releaseAt: "15 mins before drop" },
       });
 
-      // Submit squad registration to Supabase database
       const response = await fetch("/api/public/register", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -133,36 +120,32 @@ export function RegisterPage() {
         throw new Error(payload.error ?? "Registration submission failed");
       }
 
-      sound.play("victory");
       setSuccess(true);
     } catch {
-      failValidation();
+      // submission fallback handling
     } finally {
       setSubmitting(false);
     }
   }
 
   function next() {
-    if (!isStepValid()) {
-      failValidation();
-      return;
-    }
+    if (!isStepValid()) return;
     setStep((value) => Math.min(value + 1, registrationSteps.length - 1));
   }
 
   return (
     <div className="pt-24 pb-16">
-      <Section id="register" eyebrow="Team registration pipeline" title="Lock your squad slot.">
-        <div data-weapon-reload className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
+      <Section id="register" eyebrow="Team Registration Pipeline" title="Lock Your Squad Slot">
+        <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
           {/* Progress Sidebar */}
-          <div data-gsap-reveal className="clip-panel hud-panel p-6">
-            <p className="font-mono text-xs uppercase tracking-[0.22em] text-green-300">
+          <div className="hud-panel border border-sky-400/25 p-6">
+            <p className="font-mono text-xs uppercase tracking-[0.22em] text-sky-400 font-bold">
               Registration Pipeline
             </p>
-            <div className="mt-4 h-5 border border-orange-300/30 bg-black/60 p-1">
-              <motion.div className="health-fill h-full" animate={{ width: `${progress}%` }} />
+            <div className="mt-4 h-4 border border-sky-400/30 bg-slate-950 p-0.5">
+              <div className="h-full bg-sky-400" style={{ width: `${progress}%` }} />
             </div>
-            <div className="mt-6 space-y-3">
+            <div className="mt-6 space-y-2.5">
               {registrationSteps.map((label, index) => (
                 <button
                   key={label}
@@ -170,13 +153,13 @@ export function RegisterPage() {
                   onClick={() => setStep(index)}
                   className={`flex w-full items-center justify-between border px-4 py-3 text-left font-mono text-xs uppercase tracking-[0.18em] transition ${
                     index === step
-                      ? "border-orange-300/60 bg-orange-500/15 text-orange-100"
+                      ? "border-sky-400 bg-sky-500/20 text-sky-100 font-bold"
                       : "border-white/10 bg-white/[0.03] text-slate-400 hover:text-white"
                   }`}
                 >
                   {label}
                   {index < step ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-300" />
+                    <CheckCircle2 className="h-4 w-4 text-sky-400" />
                   ) : (
                     <span>0{index + 1}</span>
                   )}
@@ -186,97 +169,80 @@ export function RegisterPage() {
           </div>
 
           {/* Step Container */}
-          <motion.div
-            data-gsap-reveal
-            className={`clip-panel hud-panel p-6 ${shake ? "shake-error" : ""}`}
-          >
-            <AnimatePresence mode="wait">
-              {success ? (
-                <motion.div
-                  key="success"
-                  initial={{ opacity: 0, scale: 0.94 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="space-y-4 text-center py-8"
-                >
-                  <Trophy className="mx-auto h-16 w-16 text-orange-400 animate-bounce" />
-                  <p className="font-mono text-xs uppercase tracking-[0.24em] text-green-300">
-                    Slot Lock Confirmed
-                  </p>
-                  <h3 className="font-display text-5xl font-bold uppercase text-white">
-                    Squad Lock Verified
-                  </h3>
-                  <p className="mx-auto max-w-md font-mono text-xs text-slate-300 leading-relaxed">
-                    Squad <span className="font-bold text-white">{form.teamName}</span> (Captain{" "}
-                    <span className="font-bold text-white">{form.captainName}</span>) has been submitted to the Supabase database. Organizers will review your payment screenshot in the Admin Panel.
-                  </p>
-                  <div className="pt-4 flex flex-wrap justify-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => navigate("/dashboard")}
-                      className="border border-green-400 bg-green-500/20 px-6 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-green-100 hover:bg-green-500 hover:text-black transition"
-                    >
-                      View My Dashboard
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSuccess(false);
-                        setStep(0);
-                      }}
-                      className="border border-white/15 bg-white/5 px-6 py-3 font-mono text-xs uppercase tracking-[0.2em] text-slate-300 hover:border-orange-400"
-                    >
-                      Register Another Squad
-                    </button>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key={step}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-6"
-                >
-                  <StepFields
-                    step={step}
-                    form={form}
-                    tournaments={tournaments}
-                    setField={setField}
-                    setFile={setFile}
-                    setForm={setForm}
-                  />
+          <div className="hud-panel border border-sky-400/25 p-6">
+            {success ? (
+              <div className="space-y-4 text-center py-8">
+                <Trophy className="mx-auto h-16 w-16 text-sky-400" />
+                <p className="font-mono text-xs uppercase tracking-[0.24em] text-sky-400 font-bold">
+                  Slot Lock Confirmed
+                </p>
+                <h3 className="font-display text-5xl font-bold uppercase text-white">
+                  Squad Lock Verified
+                </h3>
+                <p className="mx-auto max-w-md font-mono text-xs text-slate-300 leading-relaxed">
+                  Squad <span className="font-bold text-white">{form.teamName}</span> (Captain{" "}
+                  <span className="font-bold text-white">{form.captainName}</span>) has been submitted to the database. Organizers will review your payment screenshot in the Admin Panel.
+                </p>
+                <div className="pt-4 flex flex-wrap justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/dashboard")}
+                    className="border border-sky-400 bg-sky-500/20 px-6 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-sky-100 hover:bg-sky-400 hover:text-black transition"
+                  >
+                    View My Dashboard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSuccess(false);
+                      setStep(0);
+                    }}
+                    className="border border-white/15 bg-white/5 px-6 py-3 font-mono text-xs uppercase tracking-[0.2em] text-slate-300 hover:border-sky-400"
+                  >
+                    Register Another Squad
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <StepFields
+                  step={step}
+                  form={form}
+                  tournaments={tournaments}
+                  setField={setField}
+                  setFile={setFile}
+                  setForm={setForm}
+                />
 
-                  <div className="flex items-center justify-between border-t border-white/10 pt-6">
+                <div className="flex items-center justify-between border-t border-white/10 pt-6">
+                  <button
+                    type="button"
+                    onClick={() => setStep((value) => Math.max(value - 1, 0))}
+                    disabled={step === 0}
+                    className="border border-white/15 bg-white/5 px-5 py-3 font-mono text-xs uppercase tracking-[0.2em] text-slate-300 disabled:opacity-30"
+                  >
+                    Previous
+                  </button>
+                  {step === registrationSteps.length - 1 ? (
+                    <MagneticButton
+                      onClick={() => void submit()}
+                      disabled={submitting}
+                    >
+                      {submitting ? "Submitting to Database..." : "Confirm & Submit Registration"}
+                    </MagneticButton>
+                  ) : (
                     <button
                       type="button"
-                      onClick={() => setStep((value) => Math.max(value - 1, 0))}
-                      disabled={step === 0}
-                      className="border border-white/15 bg-white/5 px-5 py-3 font-mono text-xs uppercase tracking-[0.2em] text-slate-300 disabled:opacity-30"
+                      onClick={next}
+                      className="flex items-center gap-2 border border-sky-400 bg-sky-500/20 px-6 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-sky-100 hover:bg-sky-400 hover:text-black transition"
                     >
-                      Previous
+                      Next <ChevronRight className="h-4 w-4" />
                     </button>
-                    {step === registrationSteps.length - 1 ? (
-                      <MagneticButton
-                        playSound={sound.play}
-                        onClick={() => void submit()}
-                        disabled={submitting}
-                      >
-                        {submitting ? "Submitting to Database..." : "Confirm & Submit Registration"}
-                      </MagneticButton>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={next}
-                        className="flex items-center gap-2 border border-orange-400/60 bg-orange-500/20 px-6 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-orange-100 hover:bg-orange-500 hover:text-black transition"
-                      >
-                        Next <ChevronRight className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </Section>
     </div>
@@ -393,9 +359,9 @@ function StepFields({
 
   return (
     <FormGrid title="Slot Payment & Proof Upload">
-      <div className="border border-orange-400/40 bg-orange-500/10 p-4 font-mono text-xs text-orange-100">
-        <span className="font-bold uppercase block text-orange-300">UPI Slot Payment</span>
-        Transfer entry fee to UPI ID <span className="font-bold text-white">7996488242@upi</span> or <span className="font-bold text-white">nexbattles@upi</span>, then upload your transaction screenshot below.
+      <div className="border border-sky-400/40 bg-sky-500/10 p-4 font-mono text-xs text-sky-100">
+        <span className="font-bold uppercase block text-sky-400">UPI Slot Payment</span>
+        Transfer entry fee to UPI ID <span className="font-bold text-white">7996488242@upi</span> or <span className="font-bold text-white">lordsesports@upi</span>, then upload your transaction screenshot below.
       </div>
       <FileField
         label="Payment screenshot receipt upload"
@@ -403,8 +369,8 @@ function StepFields({
         onChange={(event) => setFile("paymentFileName", event)}
       />
       {form.paymentFileName && form.paymentFileName.startsWith("data:image/") ? (
-        <div className="mt-3 border border-green-400/30 p-2 bg-black/60">
-          <p className="font-mono text-[0.65rem] uppercase text-green-300 mb-1">Attached Screenshot Preview:</p>
+        <div className="mt-3 border border-sky-400/40 p-2 bg-slate-950">
+          <p className="font-mono text-[0.65rem] uppercase text-sky-400 mb-1">Attached Screenshot Preview:</p>
           <img src={form.paymentFileName} alt="Payment Screenshot" className="max-h-36 object-contain mx-auto border" />
         </div>
       ) : null}
@@ -457,9 +423,9 @@ function FileField({
   return (
     <label className="field-shell">
       {label}
-      <span className="flex items-center justify-between gap-3 border border-white/10 bg-black/55 px-4 py-3 text-slate-300">
-        <span className="truncate text-green-300 font-bold">{value || "Choose receipt screenshot image"}</span>
-        <ImagePlus className="h-4 w-4 text-orange-300" />
+      <span className="flex items-center justify-between gap-3 border border-white/10 bg-slate-950 px-4 py-3 text-slate-300">
+        <span className="truncate text-sky-400 font-bold">{value || "Choose receipt screenshot image"}</span>
+        <ImagePlus className="h-4 w-4 text-sky-400" />
         <input
           type="file"
           accept="image/*"

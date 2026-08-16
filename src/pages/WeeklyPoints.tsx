@@ -1,5 +1,4 @@
-import { motion } from "framer-motion";
-import { ArrowDown, ArrowUp, Crown, Flame, Search, Skull, Trophy, Swords, CalendarDays } from "lucide-react";
+import { ArrowDown, ArrowUp, Crown, Search, Trophy } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Section, usePlatformData } from "../lib/shared-ui";
@@ -9,11 +8,8 @@ function LeaderboardRow({ team, rankOverride }: { team: Team; rankOverride?: num
   const displayRank = rankOverride ?? team.rank;
   const up = (team.recentForm && team.recentForm[0] === "W") || displayRank <= 3;
   return (
-    <motion.tr
-      whileHover={{ backgroundColor: "rgba(255,107,0,0.1)" }}
-      className="border-t border-white/10"
-    >
-      <td className="p-4 font-display text-3xl font-bold text-orange-300">#{displayRank}</td>
+    <tr className="border-t border-sky-400/15 hover:bg-sky-950/20">
+      <td className="p-4 font-display text-3xl font-bold text-sky-400">#{displayRank}</td>
       <td className="p-4">
         <p className="font-bold text-white text-base">{team.name}</p>
         <p className="font-mono text-xs uppercase tracking-[0.16em] text-slate-400">
@@ -27,14 +23,14 @@ function LeaderboardRow({ team, rankOverride }: { team: Team; rankOverride?: num
       <td className="p-4">
         <span
           className={`inline-flex items-center gap-1 font-mono text-xs uppercase tracking-[0.18em] ${
-            up ? "text-green-300" : "text-red-300"
+            up ? "text-sky-300" : "text-slate-400"
           }`}
         >
-          {up ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
-          {up ? "rising" : "under fire"}
+          {up ? <ArrowUp className="h-4 w-4 text-sky-400" /> : <ArrowDown className="h-4 w-4" />}
+          {up ? "rising" : "steady"}
         </span>
       </td>
-    </motion.tr>
+    </tr>
   );
 }
 
@@ -95,8 +91,8 @@ export function WeeklyPointsPage() {
         </p>
 
         {/* Battle Filter Selector */}
-        <div className="mt-8 border border-orange-500/30 bg-black/60 p-4">
-          <span className="font-mono text-xs uppercase tracking-[0.2em] text-orange-300">
+        <div className="mt-8 border border-sky-400/30 bg-slate-950 p-4">
+          <span className="font-mono text-xs uppercase tracking-[0.2em] text-sky-400">
             Select Dedicated Battle / Scrim
           </span>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -107,7 +103,7 @@ export function WeeklyPointsPage() {
                 onClick={() => setSelectedBattle(battle.id)}
                 className={`border px-3.5 py-2 font-mono text-xs uppercase tracking-[0.14em] transition ${
                   selectedBattle === battle.id
-                    ? "border-orange-400 bg-orange-500/20 font-bold text-orange-100 shadow-[0_0_15px_rgba(255,107,0,0.25)]"
+                    ? "border-sky-400 bg-sky-500/20 font-bold text-sky-100"
                     : "border-white/10 bg-white/5 text-slate-400 hover:text-white"
                 }`}
               >
@@ -120,19 +116,18 @@ export function WeeklyPointsPage() {
         {/* Top Weekly MVPs */}
         {topFraggers.length ? (
           <div className="mt-10">
-            <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.24em] text-orange-300">
+            <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.24em] text-sky-400">
               <Trophy className="h-4 w-4" /> Dedicated MVP Frag Slayers — {currentBattle.name}
             </div>
             <div className="mt-4 grid gap-4 md:grid-cols-4">
               {topFraggers.map((mvp, index) => (
-                <motion.div
+                <div
                   key={mvp.name}
-                  whileHover={{ y: -6 }}
-                  className="clip-panel hud-panel border border-orange-500/30 p-5 relative overflow-hidden"
+                  className="hud-panel border border-sky-400/30 p-5 relative overflow-hidden"
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-display text-4xl">👑</span>
-                    <span className="border border-orange-400/40 bg-orange-500/10 px-2 py-0.5 font-mono text-[0.62rem] font-bold uppercase tracking-[0.18em] text-orange-200">
+                    <span className="border border-sky-400/40 bg-sky-500/10 px-2 py-0.5 font-mono text-[0.62rem] font-bold uppercase tracking-[0.18em] text-sky-200">
                       RANK #{index + 1}
                     </span>
                   </div>
@@ -140,14 +135,14 @@ export function WeeklyPointsPage() {
                   <h4 className="mt-4 font-display text-3xl font-bold uppercase text-white">
                     {mvp.captain}
                   </h4>
-                  <p className="font-mono text-xs uppercase tracking-[0.16em] text-green-300">
+                  <p className="font-mono text-xs uppercase tracking-[0.16em] text-sky-300">
                     {mvp.name} ({mvp.short})
                   </p>
 
                   <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-3 font-mono text-xs">
                     <div>
                       <span className="block text-[0.62rem] text-slate-400">FINISHES</span>
-                      <span className="font-display text-2xl font-bold text-orange-400">
+                      <span className="font-display text-2xl font-bold text-sky-400">
                         {mvp.finishes} Kills
                       </span>
                     </div>
@@ -158,7 +153,7 @@ export function WeeklyPointsPage() {
                       </span>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
           </div>
@@ -166,7 +161,7 @@ export function WeeklyPointsPage() {
 
         {/* Main Leaderboard Table */}
         {teams.length ? (
-          <div className="mt-10 clip-panel hud-panel overflow-x-auto p-2">
+          <div className="mt-10 hud-panel border border-sky-400/25 overflow-x-auto p-2">
             <table className="w-full text-left min-w-[700px]">
               <thead className="border-b border-white/10 font-mono text-xs uppercase tracking-[0.2em] text-slate-400">
                 <tr>
@@ -187,13 +182,13 @@ export function WeeklyPointsPage() {
             </table>
           </div>
         ) : (
-          <div className="mt-10 border border-white/10 bg-black/60 p-10 text-center font-mono text-xs uppercase tracking-[0.18em] text-slate-400">
-            <Trophy className="mx-auto h-10 w-10 text-orange-400/60 mb-3" />
+          <div className="mt-10 border border-sky-400/20 bg-slate-950 p-10 text-center font-mono text-xs uppercase tracking-[0.18em] text-slate-400">
+            <Trophy className="mx-auto h-10 w-10 text-sky-400/60 mb-3" />
             <p className="text-sm font-bold text-white">No Weekly Standings or MVP Stats Recorded Yet</p>
             <p className="mt-2 text-slate-400">Scores and top frag slayers will populate live during match gameplay.</p>
             <Link
               to="/admin"
-              className="mt-6 inline-block border border-orange-400/60 bg-orange-500/20 px-6 py-3 text-orange-200 hover:bg-orange-500 hover:text-black transition font-bold"
+              className="mt-6 inline-block border border-sky-400/60 bg-sky-500/20 px-6 py-3 text-sky-200 hover:bg-sky-400 hover:text-black transition font-bold"
             >
               Open Admin Panel
             </Link>

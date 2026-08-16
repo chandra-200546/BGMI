@@ -106,7 +106,7 @@ export function AuthModal({
               </button>
 
               <p className="text-center font-mono text-[0.68rem] text-slate-400 leading-relaxed pt-2">
-                By logging in with Google, you agree to NexBattles tournament rules & fair play policies.
+                By logging in with Google, you agree to LordsEsports tournament rules & fair play policies.
               </p>
 
               {message ? (

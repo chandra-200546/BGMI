@@ -77,18 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "NexBattles BGMI - Esports Tournament Platform" },
+      { title: "LordsEsports BGMI - Esports Tournament Platform" },
       {
         name: "description",
         content:
           "Premium BGMI esports tournament management for team registration, live leaderboards, schedules, room release, notifications, and admin operations.",
       },
-      { name: "author", content: "NexBattles" },
-      { property: "og:title", content: "NexBattles BGMI - Tournament Command Center" },
+      { name: "author", content: "LordsEsports" },
+      { property: "og:title", content: "LordsEsports BGMI - Tournament Command Center" },
       {
         property: "og:description",
         content:
-          "A futuristic esports command center for BGMI organizers, captains, players, and spectators.",
+          "A clean esports command center for BGMI organizers, captains, players, and spectators.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -100,38 +100,29 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Teko:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Teko:wght@500;700&display=swap",
       },
     ],
   }),
-
-  shellComponent: RootShell,
-  component: RootComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
+  component: RootDocument,
 });
 
-function RootShell({ children }: { children: ReactNode }) {
+function RootDocument() {
+  const { queryClient } = Route.useRouteContext();
+
   return (
     <html lang="en">
       <head>
         <HeadContent />
       </head>
-      <body>
-        {children}
+      <body className="bg-background font-sans text-foreground antialiased selection:bg-primary selection:text-primary-foreground">
+        <QueryClientProvider client={queryClient}>
+          <Outlet />
+        </QueryClientProvider>
         <Scripts />
       </body>
     </html>
-  );
-}
-
-function RootComponent() {
-  const { queryClient } = Route.useRouteContext();
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
-    </QueryClientProvider>
   );
 }

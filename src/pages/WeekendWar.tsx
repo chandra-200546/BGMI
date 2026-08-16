@@ -1,7 +1,6 @@
-import { motion } from "framer-motion";
-import { ChevronRight, Crown, Shield, Skull, Swords, Trophy, Zap } from "lucide-react";
+import { ChevronRight, Crown, Shield, Skull, Swords, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
-import { AnimatedNumber, HudMetric, MagneticButton, Section, usePlatformData, useSoundDesign } from "../lib/shared-ui";
+import { AnimatedNumber, HudMetric, MagneticButton, Section, usePlatformData } from "../lib/shared-ui";
 
 const prizeTiers = [
   { label: "Champion Squad", split: "55%", badge: "WWCD Winner", icon: Crown },
@@ -11,7 +10,6 @@ const prizeTiers = [
 
 export function WeekendWarPage() {
   const { data } = usePlatformData();
-  const sound = useSoundDesign();
   const activeTournament = data.tournaments[0];
   const prizeNumber = Number((activeTournament?.prize ?? "0").replace(/[^0-9]/g, "")) || 0;
 
@@ -24,12 +22,12 @@ export function WeekendWarPage() {
 
         {activeTournament ? (
           <div className="mt-10 grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
-            <div data-gsap-reveal className="clip-panel hud-panel p-6">
+            <div className="hud-panel p-6">
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                <span className="font-mono text-xs uppercase tracking-[0.24em] text-orange-300">
+                <span className="font-mono text-xs uppercase tracking-[0.24em] text-sky-400">
                   Official Championship Format
                 </span>
-                <Zap className="h-6 w-6 text-orange-300" />
+                <Zap className="h-6 w-6 text-sky-400" />
               </div>
               <h3 className="mt-4 font-display text-4xl font-bold uppercase text-white">
                 {activeTournament.name}
@@ -44,7 +42,7 @@ export function WeekendWarPage() {
 
               <div className="mt-8">
                 <Link to="/register">
-                  <MagneticButton playSound={sound.play} className="w-full justify-center">
+                  <MagneticButton className="w-full justify-center">
                     Register Squad for Weekend War <ChevronRight className="h-5 w-5" />
                   </MagneticButton>
                 </Link>
@@ -55,19 +53,20 @@ export function WeekendWarPage() {
               {prizeTiers.map((tier) => {
                 const Icon = tier.icon;
                 return (
-                  <motion.div
+                  <div
                     key={tier.label}
-                    whileHover={{ y: -8, rotateX: 5 }}
-                    className="clip-panel hud-panel min-h-64 p-5"
+                    className="hud-panel min-h-64 p-5 flex flex-col justify-between"
                   >
-                    <Icon className="h-8 w-8 text-orange-300" />
-                    <p className="mt-8 font-mono text-xs uppercase tracking-[0.22em] text-green-300">
-                      {tier.badge}
-                    </p>
-                    <h3 className="mt-2 font-display text-3xl font-bold uppercase text-white">
-                      {tier.label}
-                    </h3>
-                    <p className="mt-5 font-display text-4xl font-bold text-orange-300">
+                    <div>
+                      <Icon className="h-8 w-8 text-sky-400" />
+                      <p className="mt-6 font-mono text-xs uppercase tracking-[0.22em] text-sky-300">
+                        {tier.badge}
+                      </p>
+                      <h3 className="mt-2 font-display text-3xl font-bold uppercase text-white">
+                        {tier.label}
+                      </h3>
+                    </div>
+                    <p className="mt-5 font-display text-4xl font-bold text-sky-400">
                       {prizeNumber > 0 ? (
                         <AnimatedNumber
                           value={Math.round(prizeNumber * (Number(tier.split.replace("%", "")) / 100))}
@@ -77,41 +76,41 @@ export function WeekendWarPage() {
                         tier.split
                       )}
                     </p>
-                  </motion.div>
+                  </div>
                 );
               })}
             </div>
           </div>
         ) : (
-          <div className="mt-10 border border-white/10 bg-black/60 p-10 text-center font-mono text-xs uppercase tracking-[0.18em] text-slate-400">
-            <Crown className="mx-auto h-10 w-10 text-orange-400/60 mb-3" />
+          <div className="mt-10 border border-sky-400/20 bg-slate-950 p-10 text-center font-mono text-xs uppercase tracking-[0.18em] text-slate-400">
+            <Crown className="mx-auto h-10 w-10 text-sky-400/60 mb-3" />
             <p className="text-sm font-bold text-white">No Active Weekend War Championship Scheduled</p>
             <p className="mt-2 text-slate-400">Organizers can create and launch major weekend tournaments anytime from the Admin Panel.</p>
             <Link
               to="/admin"
-              className="mt-6 inline-block border border-orange-400/60 bg-orange-500/20 px-6 py-3 text-orange-200 hover:bg-orange-500 hover:text-black transition font-bold"
+              className="mt-6 inline-block border border-sky-400/60 bg-sky-500/20 px-6 py-3 text-sky-200 hover:bg-sky-400 hover:text-black transition font-bold"
             >
               Announce Championship in Admin Panel
             </Link>
           </div>
         )}
 
-        <div className="mt-12 border border-white/10 bg-black/50 p-6 backdrop-blur-md">
+        <div className="mt-12 border border-sky-400/20 bg-slate-950/80 p-6">
           <h4 className="font-display text-3xl font-bold uppercase text-white">
             Championship Rules & Format
           </h4>
           <ul className="mt-4 grid gap-3 font-mono text-xs text-slate-300 md:grid-cols-2">
             <li className="flex items-center gap-2 border border-white/10 p-3">
-              <Shield className="h-4 w-4 text-orange-300" /> 16 Placement Points + 1 Point per Frag
+              <Shield className="h-4 w-4 text-sky-400" /> 16 Placement Points + 1 Point per Frag
             </li>
             <li className="flex items-center gap-2 border border-white/10 p-3">
-              <Shield className="h-4 w-4 text-orange-300" /> Room credentials released 15 mins before drop
+              <Shield className="h-4 w-4 text-sky-400" /> Room credentials released 15 mins before drop
             </li>
             <li className="flex items-center gap-2 border border-white/10 p-3">
-              <Shield className="h-4 w-4 text-orange-300" /> Emulators strictly banned (Mobile Only)
+              <Shield className="h-4 w-4 text-sky-400" /> Emulators strictly banned (Mobile Only)
             </li>
             <li className="flex items-center gap-2 border border-white/10 p-3">
-              <Shield className="h-4 w-4 text-orange-300" /> Captain check-in required on Discord / WhatsApp
+              <Shield className="h-4 w-4 text-sky-400" /> Captain check-in required on Discord / WhatsApp
             </li>
           </ul>
         </div>

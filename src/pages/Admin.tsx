@@ -1,5 +1,5 @@
-import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle, Eye, LockKeyhole, RefreshCw, ShieldCheck, SlidersHorizontal, Trash2, Users, X, XCircle } from "lucide-react";
+import { AnimatePresence } from "framer-motion";
+import { CheckCircle, Eye, LockKeyhole, RefreshCw, SlidersHorizontal, Trash2, X, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   formatUpdatedAt,
@@ -34,7 +34,7 @@ export function AdminPanelModal({
 }) {
   const [adminKey, setAdminKey] = useState(() => {
     if (typeof window !== "undefined") {
-      return sessionStorage.getItem("nexbattles_admin_pass") || "vinaygbmi!@#$%^&*";
+      return sessionStorage.getItem("lordsesports_admin_pass") || "vinaygbmi!@#$%^&*";
     }
     return "vinaygbmi!@#$%^&*";
   });
@@ -80,7 +80,7 @@ export function AdminPanelModal({
     }
   }, [data.tournaments, form.tournamentId]);
 
-  // Auto-attempt unlock if adminKey is already set
+  // Auto-attempt unlock if adminKey is set
   useEffect(() => {
     if (open && adminKey && !unlocked) {
       void unlockWithKey(adminKey);
@@ -106,7 +106,7 @@ export function AdminPanelModal({
       }
       setUnlocked(true);
       if (typeof window !== "undefined") {
-        sessionStorage.setItem("nexbattles_admin_pass", keyToTry);
+        sessionStorage.setItem("lordsesports_admin_pass", keyToTry);
       }
       setStatus("Admin Command Deck unlocked successfully.");
       await loadSnapshotWithKey(keyToTry);
@@ -234,9 +234,9 @@ export function AdminPanelModal({
 
   const contentUI = (
     <div className="space-y-6">
-      <div className="flex items-center justify-between border-b border-white/10 pb-4">
+      <div className="flex items-center justify-between border-b border-sky-400/20 pb-4">
         <div>
-          <p className="font-mono text-xs uppercase tracking-[0.24em] text-orange-300">
+          <p className="font-mono text-xs uppercase tracking-[0.24em] text-sky-400 font-bold">
             Real Supabase Operations Deck
           </p>
           <h2 className="font-display text-4xl font-bold uppercase text-white">
@@ -247,17 +247,17 @@ export function AdminPanelModal({
           type="button"
           onClick={() => void loadSnapshot()}
           disabled={busy || !unlocked}
-          className="flex items-center gap-2 border border-white/15 bg-white/5 px-3 py-2 font-mono text-xs uppercase tracking-[0.16em] text-slate-300 hover:border-orange-400 hover:text-white disabled:opacity-40"
+          className="flex items-center gap-2 border border-sky-400/30 bg-sky-500/10 px-3 py-2 font-mono text-xs uppercase tracking-[0.16em] text-sky-200 hover:bg-sky-400 hover:text-black disabled:opacity-40"
         >
-          <RefreshCw className={`h-4 w-4 ${busy ? "animate-spin text-orange-400" : ""}`} /> Sync DB
+          <RefreshCw className={`h-4 w-4 ${busy ? "animate-spin text-sky-400" : ""}`} /> Sync DB
         </button>
       </div>
 
       {!unlocked ? (
-        <div className="clip-panel hud-panel border border-orange-400/40 p-6 space-y-4">
-          <div className="flex items-center gap-3 text-orange-300">
+        <div className="hud-panel border border-sky-400/40 p-6 space-y-4">
+          <div className="flex items-center gap-3 text-sky-400">
             <LockKeyhole className="h-6 w-6" />
-            <span className="font-mono text-xs uppercase tracking-[0.2em]">
+            <span className="font-mono text-xs uppercase tracking-[0.2em] font-bold">
               Admin Security Verification Required
             </span>
           </div>
@@ -270,19 +270,19 @@ export function AdminPanelModal({
               value={adminKey}
               onChange={(e) => setAdminKey(e.target.value)}
               placeholder="Enter admin passcode"
-              className="flex-1 border border-white/15 bg-black/60 px-4 py-3 font-mono text-xs text-white outline-none focus:border-orange-400"
+              className="flex-1 border border-sky-400/30 bg-slate-950 px-4 py-3 font-mono text-xs text-white outline-none focus:border-sky-400"
             />
             <button
               type="button"
               onClick={() => void unlock()}
               disabled={busy}
-              className="border border-orange-400/60 bg-orange-500/20 px-6 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-orange-100 hover:bg-orange-500 hover:text-black transition"
+              className="border border-sky-400 bg-sky-500/20 px-6 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-sky-100 hover:bg-sky-400 hover:text-black transition"
             >
               {busy ? "Verifying..." : "Unlock Deck"}
             </button>
           </div>
           {status ? (
-            <p className="font-mono text-xs text-orange-200 border border-orange-500/30 bg-black/40 p-3">
+            <p className="font-mono text-xs text-sky-200 border border-sky-400/30 bg-slate-950 p-3">
               {status}
             </p>
           ) : null}
@@ -308,7 +308,7 @@ export function AdminPanelModal({
                 }
                 className={`border p-3 text-center transition ${
                   activeTask === task.id
-                    ? "border-orange-400 bg-orange-500/20 font-bold text-orange-100 shadow-[0_0_15px_rgba(255,107,0,0.2)]"
+                    ? "border-sky-400 bg-sky-500/20 font-bold text-sky-100"
                     : "border-white/10 bg-white/[0.03] text-slate-400 hover:text-white"
                 }`}
               >
@@ -318,7 +318,7 @@ export function AdminPanelModal({
           </div>
 
           {/* Active Task Form */}
-          <div className="clip-panel hud-panel border border-white/10 p-5 space-y-4">
+          <div className="hud-panel border border-sky-400/25 p-5 space-y-4">
             <AdminTaskFields
               activeTask={activeTask}
               form={form}
@@ -335,25 +335,25 @@ export function AdminPanelModal({
                 type="button"
                 onClick={() => void runCommand()}
                 disabled={busy}
-                className="border border-orange-400/60 bg-orange-500/20 px-6 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.2em] text-orange-100 hover:bg-orange-500 hover:text-black transition"
+                className="border border-sky-400 bg-sky-500/20 px-6 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.2em] text-sky-100 hover:bg-sky-400 hover:text-black transition"
               >
                 {busy ? "Executing..." : "Execute Command"}
               </button>
             </div>
             {status ? (
-              <p className="font-mono text-xs text-orange-200 border border-orange-500/30 bg-black/40 p-3">
+              <p className="font-mono text-xs text-sky-200 border border-sky-400/30 bg-slate-950 p-3">
                 {status}
               </p>
             ) : null}
           </div>
 
-          {/* Real-time Supabase Database Table Inspector */}
-          <div className="clip-panel hud-panel border border-white/10 p-5">
+          {/* Database Inspector */}
+          <div className="hud-panel border border-sky-400/25 p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-display text-2xl font-bold uppercase text-white flex items-center gap-2">
-                <SlidersHorizontal className="h-5 w-5 text-orange-400" /> Database Table Browser
+                <SlidersHorizontal className="h-5 w-5 text-sky-400" /> Database Table Browser
               </h3>
-              <span className="font-mono text-xs text-green-300 uppercase tracking-widest">
+              <span className="font-mono text-xs text-sky-400 uppercase tracking-widest font-bold">
                 Connected to Supabase REST API
               </span>
             </div>
@@ -373,20 +373,10 @@ export function AdminPanelModal({
       {/* Payment Screenshot Modal */}
       <AnimatePresence>
         {selectedScreenshot ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="relative max-h-[90vh] max-w-3xl overflow-hidden border border-orange-400/60 bg-black p-6 shadow-2xl"
-            >
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+            <div className="relative max-h-[90vh] max-w-3xl overflow-hidden border border-sky-400/60 bg-black p-6">
               <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
-                <h4 className="font-display text-2xl font-bold uppercase text-orange-300">
+                <h4 className="font-display text-2xl font-bold uppercase text-sky-400">
                   📸 Payment Screenshot Receipt
                 </h4>
                 <button
@@ -397,7 +387,7 @@ export function AdminPanelModal({
                   <X className="h-6 w-6" />
                 </button>
               </div>
-              <div className="max-h-[70vh] overflow-auto flex items-center justify-center border border-white/10 bg-black/80 p-2">
+              <div className="max-h-[70vh] overflow-auto flex items-center justify-center border border-white/10 bg-slate-950 p-2">
                 <img
                   src={selectedScreenshot}
                   alt="Payment Receipt Screenshot"
@@ -413,8 +403,8 @@ export function AdminPanelModal({
                   Close Receipt
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         ) : null}
       </AnimatePresence>
     </div>
@@ -427,30 +417,20 @@ export function AdminPanelModal({
   return (
     <AnimatePresence>
       {open ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
-        >
-          <motion.div
-            initial={{ scale: 0.96, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.96, opacity: 0 }}
-            className="relative max-h-[90vh] w-full max-w-5xl overflow-y-auto border border-orange-400/40 bg-slate-950 p-6 shadow-2xl"
-          >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
+          <div className="relative max-h-[90vh] w-full max-w-5xl overflow-y-auto border border-sky-400/40 bg-slate-950 p-6">
             <div className="absolute right-4 top-4">
               <button
                 type="button"
                 onClick={onClose}
-                className="border border-white/10 p-2 text-slate-300 hover:border-orange-400 hover:text-white"
+                className="border border-white/10 p-2 text-slate-300 hover:border-sky-400 hover:text-white"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             {contentUI}
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       ) : null}
     </AnimatePresence>
   );
@@ -777,7 +757,7 @@ function AdminDatabaseBrowser({
             onClick={() => setActiveTab(tab.key)}
             className={`border px-3.5 py-2 font-mono text-[0.65rem] font-bold uppercase tracking-[0.16em] ${
               activeTab === tab.key
-                ? "border-orange-400 bg-orange-500/20 text-orange-100 shadow-[0_0_15px_rgba(255,107,0,0.2)]"
+                ? "border-sky-400 bg-sky-500/20 text-sky-100 font-bold"
                 : "border-white/10 bg-white/[0.03] text-slate-400 hover:text-slate-200"
             }`}
           >
@@ -786,9 +766,9 @@ function AdminDatabaseBrowser({
         ))}
       </div>
 
-      <div className="overflow-x-auto border border-white/10 bg-black/45">
+      <div className="overflow-x-auto border border-sky-400/20 bg-slate-950">
         <table className="w-full min-w-[980px] text-left">
-          <thead className="bg-white/[0.04] font-mono text-[0.62rem] uppercase tracking-[0.18em] text-slate-500">
+          <thead className="bg-white/[0.04] font-mono text-[0.62rem] uppercase tracking-[0.18em] text-slate-400">
             <tr>
               {activeConfig.columns.map((column) => (
                 <th key={column} className="p-3">
@@ -806,7 +786,7 @@ function AdminDatabaseBrowser({
                 const paymentFile = String(row.payment_file_name ?? "");
 
                 return (
-                  <tr key={rowId} className="border-t border-white/10">
+                  <tr key={rowId} className="border-t border-white/10 hover:bg-sky-950/20">
                     {activeConfig.columns.map((column) => {
                       const val = row[column];
                       if (column === "payment_file_name" && paymentFile) {
@@ -815,7 +795,7 @@ function AdminDatabaseBrowser({
                             <button
                               type="button"
                               onClick={() => onOpenScreenshot(paymentFile)}
-                              className="inline-flex items-center gap-1.5 border border-green-400/50 bg-green-500/20 px-2.5 py-1 font-mono text-[0.65rem] font-bold uppercase tracking-wider text-green-100 hover:bg-green-500 hover:text-black transition"
+                              className="inline-flex items-center gap-1.5 border border-sky-400/50 bg-sky-500/20 px-2.5 py-1 font-mono text-[0.65rem] font-bold uppercase tracking-wider text-sky-100 hover:bg-sky-400 hover:text-black transition"
                             >
                               <Eye className="h-3.5 w-3.5" /> View Receipt
                             </button>
@@ -829,10 +809,10 @@ function AdminDatabaseBrowser({
                             <span
                               className={`inline-block border px-2 py-0.5 font-mono text-[0.65rem] font-bold uppercase tracking-wider ${
                                 statusVal === "APPROVED"
-                                  ? "border-green-400 bg-green-500/20 text-green-200"
+                                  ? "border-sky-400 bg-sky-500/20 text-sky-200"
                                   : statusVal === "REJECTED"
                                   ? "border-red-400 bg-red-500/20 text-red-200"
-                                  : "border-orange-400 bg-orange-500/20 text-orange-200"
+                                  : "border-sky-400/50 bg-sky-500/10 text-sky-300"
                               }`}
                             >
                               {statusVal}
@@ -852,7 +832,7 @@ function AdminDatabaseBrowser({
                           <button
                             type="button"
                             onClick={() => onUpdateStatus(rowId, "APPROVED")}
-                            className="flex items-center gap-1 border border-green-400/50 bg-green-500/10 px-2 py-1 font-mono text-[0.62rem] font-bold uppercase tracking-[0.14em] text-green-200 hover:bg-green-500 hover:text-black transition"
+                            className="flex items-center gap-1 border border-sky-400/50 bg-sky-500/10 px-2 py-1 font-mono text-[0.62rem] font-bold uppercase tracking-[0.14em] text-sky-200 hover:bg-sky-400 hover:text-black transition"
                             title="Approve & Confirm Slot"
                           >
                             <CheckCircle className="h-3 w-3" /> Approve
@@ -900,7 +880,7 @@ function AdminDatabaseBrowser({
         Snapshot: {snapshot ? formatUpdatedAt(snapshot.generatedAt) : "not loaded"}
       </p>
       {snapshot?.warnings?.length ? (
-        <div className="mt-3 border border-orange-300/30 bg-orange-500/10 p-3 text-sm text-orange-100">
+        <div className="mt-3 border border-sky-400/30 bg-sky-500/10 p-3 text-sm text-sky-100">
           {snapshot.warnings.map((warning) => (
             <p key={warning}>{warning}</p>
           ))}

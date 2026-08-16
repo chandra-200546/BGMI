@@ -6,7 +6,7 @@ export function TermsPage() {
       <Section eyebrow="Legal Notice" title="Terms of Service">
         <div className="max-w-3xl space-y-6 font-mono text-xs leading-relaxed text-slate-300">
           <p>
-            Welcome to NexBattles BGMI. By participating in any tournament, daily scrim, or registered lobby hosted on our platform, you agree to comply with these terms.
+            Welcome to LordsEsports BGMI. By participating in any tournament, daily scrim, or registered lobby hosted on our platform, you agree to comply with these terms.
           </p>
           <h3 className="font-display text-2xl font-bold uppercase text-white">1. Fair Play & Emulators</h3>
           <p>
@@ -32,7 +32,7 @@ export function PrivacyPage() {
       <Section eyebrow="Data Security" title="Privacy Policy">
         <div className="max-w-3xl space-y-6 font-mono text-xs leading-relaxed text-slate-300">
           <p>
-            NexBattles BGMI respects your privacy. We collect minimal player data required for tournament verification, room credentials distribution, and prize payouts.
+            LordsEsports BGMI respects your privacy. We collect minimal player data required for tournament verification, room credentials distribution, and prize payouts.
           </p>
           <h3 className="font-display text-2xl font-bold uppercase text-white">Information Collected</h3>
           <p>
@@ -57,36 +57,36 @@ export function ContactPage() {
             Need help with team registration, match disputes, room access, or sponsorship inquiries? Reach out to our 24/7 battle operations team.
           </p>
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="border border-white/10 bg-black/50 p-5">
+            <div className="border border-sky-400/20 bg-slate-950 p-5">
               <h4 className="font-display text-2xl font-bold uppercase text-white">WhatsApp Support</h4>
-              <p className="mt-2 text-green-300 font-bold">+91 7996488242</p>
+              <p className="mt-2 text-sky-400 font-bold">+91 7996488242</p>
               <a
                 href="https://wa.me/917996488242"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 inline-block border border-green-400/40 bg-green-500/10 px-3 py-1.5 font-mono text-[0.65rem] font-bold uppercase tracking-[0.16em] text-green-200 hover:bg-green-500 hover:text-black"
+                className="mt-3 inline-block border border-sky-400/40 bg-sky-500/10 px-3 py-1.5 font-mono text-[0.65rem] font-bold uppercase tracking-[0.16em] text-sky-200 hover:bg-sky-400 hover:text-black"
               >
                 Chat on WhatsApp
               </a>
             </div>
-            <div className="border border-white/10 bg-black/50 p-5">
+            <div className="border border-sky-400/20 bg-slate-950 p-5">
               <h4 className="font-display text-2xl font-bold uppercase text-white">Official Email</h4>
-              <p className="mt-2 text-orange-300 font-bold">Lordsesports3@gmail.com</p>
+              <p className="mt-2 text-sky-400 font-bold">Lordsesports3@gmail.com</p>
               <a
                 href="mailto:Lordsesports3@gmail.com"
-                className="mt-3 inline-block border border-orange-400/40 bg-orange-500/10 px-3 py-1.5 font-mono text-[0.65rem] font-bold uppercase tracking-[0.16em] text-orange-200 hover:bg-orange-500 hover:text-black"
+                className="mt-3 inline-block border border-sky-400/40 bg-sky-500/10 px-3 py-1.5 font-mono text-[0.65rem] font-bold uppercase tracking-[0.16em] text-sky-200 hover:bg-sky-400 hover:text-black"
               >
                 Send Email
               </a>
             </div>
-            <div className="border border-white/10 bg-black/50 p-5">
+            <div className="border border-sky-400/20 bg-slate-950 p-5">
               <h4 className="font-display text-2xl font-bold uppercase text-white">WhatsApp Channel</h4>
               <p className="mt-2 text-slate-300 font-bold">Official Announcements</p>
               <a
                 href="https://whatsapp.com/channel/0029VanlLBL9RZARIMR3Vm2W"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 inline-block border border-cyan-400/40 bg-cyan-500/10 px-3 py-1.5 font-mono text-[0.65rem] font-bold uppercase tracking-[0.16em] text-cyan-200 hover:bg-cyan-500 hover:text-black"
+                className="mt-3 inline-block border border-sky-400/40 bg-sky-500/10 px-3 py-1.5 font-mono text-[0.65rem] font-bold uppercase tracking-[0.16em] text-sky-200 hover:bg-sky-400 hover:text-black"
               >
                 Join Channel
               </a>
@@ -101,10 +101,10 @@ export function ContactPage() {
 export function AboutPage() {
   return (
     <div className="pt-24 pb-16">
-      <Section eyebrow="About Us" title="NexBattles BGMI">
+      <Section eyebrow="About Us" title="LordsEsports BGMI">
         <div className="max-w-3xl space-y-6 font-mono text-xs leading-relaxed text-slate-300">
           <p>
-            NexBattles BGMI is a premier Indian esports tournament platform dedicated to grassroots and elite mobile battle-royale competition.
+            LordsEsports BGMI is a premier Indian esports tournament platform dedicated to grassroots and elite mobile battle-royale competition.
           </p>
           <p>
             Engineered with real-time Supabase infrastructure, live points table calculation, instant room release vaults, and official tournament management pipelines.
