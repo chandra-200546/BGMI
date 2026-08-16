@@ -121,7 +121,8 @@ export type AdminCommandPayload = {
     | "deleteAnnouncement"
     | "deleteRegistration"
     | "deleteMatch"
-    | "deleteTeam";
+    | "deleteTeam"
+    | "wipeSeedData";
   title?: string;
   body?: string;
   category?: string;
@@ -365,9 +366,42 @@ async function supabaseDelete(table: string, id: string) {
   throw new Error(`Supabase ${table} delete failed: ${lastError}`);
 }
 
+async function supabaseClearTable(table: string) {
+  const url = process.env.SUPABASE_URL;
+  const keys = [process.env.SUPABASE_SERVICE_ROLE_KEY, process.env.SUPABASE_ANON_KEY].filter(
+    Boolean,
+  ) as string[];
+  if (!url || keys.length === 0) return;
+
+  for (const key of keys) {
+    try {
+      await fetch(`${url.replace(/\/$/, "")}/rest/v1/${table}?id=not.is.null`, {
+        method: "DELETE",
+        headers: {
+          apikey: key,
+          authorization: `Bearer ${key}`,
+        },
+      });
+    } catch {
+      // ignore individual delete failures
+    }
+  }
+}
+
 export async function runAdminCommand(payload: unknown) {
   const command = payload as AdminCommandPayload;
   if (!(await validateAdminKey(command.adminKey))) throw new Error("Invalid admin password");
+
+  if (command.action === "wipeSeedData") {
+    await Promise.all([
+      supabaseClearTable("matches"),
+      supabaseClearTable("announcements"),
+      supabaseClearTable("teams"),
+      supabaseClearTable("tournaments"),
+      supabaseClearTable("registration_submissions"),
+    ]);
+    return { action: command.action, status: "wiped" };
+  }
 
   if (command.action === "announcement") {
     if (!command.title?.trim()) throw new Error("Announcement title is required");
