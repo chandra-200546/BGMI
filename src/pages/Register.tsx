@@ -18,7 +18,7 @@ type RegistrationPayload = {
   paymentFileName: string;
 };
 
-const registrationSteps = ["Squad Profile", "Captain Verification", "4 Player Roster", "Comms Channel", "Proof & Pay"];
+const registrationSteps = ["Team Information", "Captain Verification", "4 Player Roster", "Team Contacts", "Proof & Pay"];
 
 export function RegisterPage() {
   const { user, addChallenge } = useAuth();
@@ -272,7 +272,7 @@ function StepFields({
 }) {
   if (step === 0) {
     return (
-      <FormGrid title="Squad Profile">
+      <FormGrid title="Team Information">
         <label className="field-shell">
           Select Tournament
           <select
@@ -348,7 +348,7 @@ function StepFields({
 
   if (step === 3) {
     return (
-      <FormGrid title="Comms channel">
+      <FormGrid title="Team Contacts">
         <Field
           label="WhatsApp number"
           value={form.whatsapp}
