@@ -137,7 +137,7 @@ export function AppNav({
   );
 }
 
-export function Footer() {
+export function Footer({ onOpenAdmin }: { onOpenAdmin?: () => void }) {
   return (
     <footer className="border-t border-sky-400/15 bg-black px-4 py-12 lg:px-6">
       <div className="mx-auto max-w-7xl">
@@ -207,7 +207,15 @@ export function Footer() {
         {/* Copyright & Attribution */}
         <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-6 md:flex-row">
           <p className="font-mono text-[0.68rem] uppercase tracking-[0.22em] text-slate-500">
-            © 2026 LordsEsports BGMI. All rights reserved.
+            <button
+              type="button"
+              onClick={onOpenAdmin}
+              className="inline-block font-bold text-sky-400 hover:scale-125 transition-transform duration-200 cursor-pointer focus:outline-none"
+              title="Admin Access"
+            >
+              ©
+            </button>{" "}
+            2026 LordsEsports BGMI. All rights reserved.
           </p>
           <div className="flex items-center gap-3">
             <span className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
@@ -276,7 +284,7 @@ export function LayoutContent({ children }: { children: ReactNode }) {
         onChanged={() => void refetch()}
       />
       <AuthModal open={authModalOpen} onClose={closeAuthModal} />
-      <Footer />
+      <Footer onOpenAdmin={() => setAdminOpen(true)} />
     </div>
   );
 }
