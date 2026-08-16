@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import {
   CalendarDays,
   Crown,
@@ -15,6 +16,7 @@ import { useAuth } from "../lib/auth-context";
 import { usePlatformData } from "../lib/shared-ui";
 import type { Tournament } from "../lib/platform-types";
 import { TournamentSlotCard } from "../components/TournamentSlotCard";
+import { TournamentDetailModal } from "../components/TournamentDetailModal";
 
 const categories = [
   {
@@ -99,11 +101,89 @@ const categories = [
   },
 ];
 
+function NormalTournamentCard({
+  tournament,
+  onOpenDetails,
+}: {
+  tournament: Tournament;
+  onOpenDetails: (t: Tournament) => void;
+}) {
+  return (
+    <div
+      onClick={() => onOpenDetails(tournament)}
+      className="group relative flex flex-col justify-between border border-sky-400/30 bg-slate-950 p-5 transition hover:border-sky-400 hover:bg-sky-950/20 cursor-pointer rounded-xl shadow-xl"
+    >
+      <div>
+        {/* Media Image Banner if uploaded by admin */}
+        {tournament.mediaUrl ? (
+          <div className="relative mb-4 overflow-hidden border border-sky-400/20 rounded-lg max-h-52">
+            <img
+              src={tournament.mediaUrl}
+              alt={tournament.name}
+              className="h-48 w-full object-cover transition duration-300 group-hover:scale-105"
+            />
+          </div>
+        ) : null}
+
+        {/* Badges & Status */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
+          <span className="border border-sky-400/40 bg-sky-500/10 px-2.5 py-0.5 font-mono text-[0.65rem] font-bold uppercase tracking-[0.18em] text-sky-300 rounded">
+            {tournament.status}
+          </span>
+          <span className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-green-400">
+            Prize: {tournament.prize}
+          </span>
+        </div>
+
+        {/* Tournament Title & Details */}
+        <h3 className="mt-4 font-display text-3xl font-bold uppercase leading-tight text-white group-hover:text-sky-300">
+          {tournament.name}
+        </h3>
+
+        <div className="mt-3 space-y-1.5 font-mono text-xs text-slate-300">
+          <div className="flex justify-between border-b border-white/5 pb-1">
+            <span className="text-slate-400">Entry Fee:</span>
+            <span className="font-bold text-white">{tournament.fee}</span>
+          </div>
+          <div className="flex justify-between border-b border-white/5 pb-1">
+            <span className="text-slate-400">Slots Filled:</span>
+            <span className="font-bold text-sky-300">
+              {tournament.registered} / {tournament.slots} Squads
+            </span>
+          </div>
+          <div className="flex justify-between border-b border-white/5 pb-1">
+            <span className="text-slate-400">Map & Mode:</span>
+            <span className="font-bold text-slate-200">
+              {tournament.map} ({tournament.mode})
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Primary Action CTA */}
+      <div className="mt-6 border-t border-white/10 pt-4">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenDetails(tournament);
+          }}
+          className="flex w-full items-center justify-center gap-2 rounded border border-sky-400 bg-sky-500/20 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-white transition hover:bg-sky-400 hover:text-black cursor-pointer"
+        >
+          <SwordsIcon className="h-4 w-4" />
+          View Details & Book Slot →
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function HomePage() {
   const { user, openAuthModal } = useAuth();
   const { data } = usePlatformData();
   const navigate = useNavigate();
 
+  const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const tournaments = data?.tournaments ?? [];
 
   function handleJoinChallenge(tournament: Tournament) {
@@ -133,14 +213,21 @@ export function HomePage() {
             </p>
           </div>
 
-          <div className="grid gap-6">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {tournaments.map((t) => (
-              <TournamentSlotCard
+              <NormalTournamentCard
                 key={t.id}
                 tournament={t}
+                onOpenDetails={(selected) => setSelectedTournament(selected)}
               />
             ))}
           </div>
+
+          <TournamentDetailModal
+            tournament={selectedTournament}
+            open={Boolean(selectedTournament)}
+            onClose={() => setSelectedTournament(null)}
+          />
         </section>
       ) : null}
 
