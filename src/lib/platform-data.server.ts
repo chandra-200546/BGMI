@@ -582,24 +582,29 @@ async function getSupabasePlatformData(): Promise<PlatformData | undefined> {
   }
 
   const [tournamentRows, teamRows, matchRows, announcementRows] = await Promise.all([
-    supabaseGet<SupabaseTournament>("tournaments?select=*&order=starts_at.asc"),
+    supabaseGet<SupabaseTournament>("tournaments?select=*&order=starts_at.asc").catch(() => []),
     supabaseGet<SupabaseTeam>(
       "teams?select=*&order=placement_points.desc&order=wwcd.desc&order=finishes.desc",
-    ),
-    supabaseGet<SupabaseMatch>("matches?select=*&order=starts_at.asc"),
+    ).catch(() => []),
+    supabaseGet<SupabaseMatch>("matches?select=*&order=starts_at.asc").catch(() => []),
     supabaseGet<SupabaseAnnouncement>(
       "announcements?select=*&order=pinned.desc&order=publish_at.desc",
-    ),
+    ).catch(() => []),
   ]);
 
+  const safeTournamentRows = Array.isArray(tournamentRows) ? tournamentRows : [];
+  const safeTeamRows = Array.isArray(teamRows) ? teamRows : [];
+  const safeMatchRows = Array.isArray(matchRows) ? matchRows : [];
+  const safeAnnouncementRows = Array.isArray(announcementRows) ? announcementRows : [];
+
   const seedIds = new Set(["nebula-masters", "crimson-rift"]);
-  const userTournaments = tournamentRows.filter((row) => !seedIds.has(row.id));
+  const userTournaments = safeTournamentRows.filter((row) => row && !seedIds.has(row.id));
 
   // Purge legacy seed rows from Supabase if present
-  const seedRowsToPurge = tournamentRows.filter((row) => seedIds.has(row.id));
+  const seedRowsToPurge = safeTournamentRows.filter((row) => row && seedIds.has(row.id));
   if (seedRowsToPurge.length > 0) {
     for (const seedRow of seedRowsToPurge) {
-      void supabaseDelete("tournaments", seedRow.id);
+      void supabaseDelete("tournaments", seedRow.id).catch(() => {});
     }
   }
 
@@ -620,9 +625,9 @@ async function getSupabasePlatformData(): Promise<PlatformData | undefined> {
     mediaUrl: row.media_url ?? undefined,
   }));
 
-  const userTeams = teamRows.filter((row) => !row.tournament_id || !seedIds.has(row.tournament_id));
-  const userMatches = matchRows.filter((row) => !row.tournament_id || !seedIds.has(row.tournament_id));
-  const userAnnouncements = announcementRows.filter((row) => !row.tournament_id || !seedIds.has(row.tournament_id));
+  const userTeams = safeTeamRows.filter((row) => row && (!row.tournament_id || !seedIds.has(row.tournament_id)));
+  const userMatches = safeMatchRows.filter((row) => row && (!row.tournament_id || !seedIds.has(row.tournament_id)));
+  const userAnnouncements = safeAnnouncementRows.filter((row) => row && (!row.tournament_id || !seedIds.has(row.tournament_id)));
 
   const teams: Team[] = userTeams.map((row, index) => ({
     rank: index + 1,
