@@ -45,34 +45,34 @@ export function AuthModal({
           className="fixed inset-0 z-[110] grid place-items-center bg-black/85 px-4 backdrop-blur-xl"
         >
           <motion.div
-            initial={{ scale: 0.92, y: 24, rotateX: -6 }}
-            animate={{ scale: 1, y: 0, rotateX: 0 }}
-            exit={{ scale: 0.92, y: 24, rotateX: -6 }}
-            className="clip-panel hud-panel relative w-full max-w-md border border-orange-500/40 p-6 md:p-8"
+            initial={{ scale: 0.92, y: 24 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.92, y: 24 }}
+            className="relative w-full max-w-md border border-sky-400/40 bg-[#030712] p-6 md:p-8"
           >
             <button
               type="button"
               onClick={onClose}
-              className="absolute right-4 top-4 grid h-9 w-9 place-items-center border border-white/15 bg-white/5 text-slate-300 transition hover:border-orange-400 hover:text-white"
+              className="absolute right-4 top-4 grid h-9 w-9 place-items-center border border-white/15 bg-white/5 text-slate-300 transition hover:border-sky-400 hover:text-white"
               aria-label="Close auth modal"
             >
               <X className="h-4 w-4" />
             </button>
 
             <div className="text-center">
-              <span className="mx-auto grid h-14 w-14 place-items-center border border-orange-400/60 bg-orange-500/10 text-orange-300 shadow-[0_0_30px_rgba(255,107,0,0.35)]">
+              <span className="mx-auto grid h-14 w-14 place-items-center border border-sky-400/60 bg-sky-500/10 text-sky-400 shadow-[0_0_30px_rgba(56,189,248,0.25)]">
                 <ShieldCheck className="h-7 w-7" />
               </span>
               <h2 className="mt-4 font-display text-4xl font-bold uppercase tracking-wider text-white">
                 Player Authentication
               </h2>
-              <p className="mt-1 font-mono text-xs uppercase tracking-[0.18em] text-green-300">
+              <p className="mt-1 font-mono text-xs uppercase tracking-[0.18em] text-sky-400 font-bold">
                 Google Single Sign-On
               </p>
             </div>
 
             {customMessage ? (
-              <div className="mt-4 border border-orange-400/40 bg-orange-500/15 p-3 text-center font-mono text-xs uppercase tracking-[0.16em] text-orange-200">
+              <div className="mt-4 border border-sky-400/40 bg-sky-500/15 p-3 text-center font-mono text-xs uppercase tracking-[0.16em] text-sky-200">
                 {customMessage}
               </div>
             ) : null}
@@ -82,7 +82,7 @@ export function AuthModal({
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={loading}
-                className="group flex w-full items-center justify-center gap-3 border border-orange-400 bg-gradient-to-r from-orange-500/30 via-orange-600/30 to-orange-500/30 py-4 px-6 font-mono text-sm font-bold uppercase tracking-[0.2em] text-white shadow-[0_0_25px_rgba(255,107,0,0.3)] transition hover:border-orange-300 hover:bg-orange-500/40 disabled:opacity-50"
+                className="group flex w-full items-center justify-center gap-3 border border-sky-400 bg-sky-500/20 py-4 px-6 font-mono text-sm font-bold uppercase tracking-[0.2em] text-white transition hover:border-sky-300 hover:bg-sky-400 hover:text-black disabled:opacity-50"
               >
                 <svg className="h-6 w-6" viewBox="0 0 24 24">
                   <path
@@ -110,7 +110,7 @@ export function AuthModal({
               </p>
 
               {message ? (
-                <div className="border border-green-400/40 bg-green-500/10 p-3 text-center font-mono text-xs uppercase text-green-200">
+                <div className="border border-sky-400/40 bg-sky-500/10 p-3 text-center font-mono text-xs uppercase text-sky-200">
                   {message}
                 </div>
               ) : null}

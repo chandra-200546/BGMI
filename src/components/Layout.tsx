@@ -141,7 +141,7 @@ export function Footer() {
   return (
     <footer className="border-t border-sky-400/15 bg-black px-4 py-12 lg:px-6">
       <div className="mx-auto max-w-7xl">
-        <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr_1fr]">
+        <div className="grid gap-8 md:grid-cols-2">
           {/* Brand & Mission */}
           <div>
             <Link to="/" className="font-display text-4xl font-bold uppercase tracking-wider text-white">
@@ -169,40 +169,6 @@ export function Footer() {
                 </a>
               ))}
             </div>
-          </div>
-
-          {/* Quick Hub Links */}
-          <div>
-            <h4 className="font-mono text-xs font-bold uppercase tracking-[0.24em] text-sky-400">
-              Tournament Hub
-            </h4>
-            <ul className="mt-4 space-y-2.5 font-mono text-xs text-slate-300">
-              <li>
-                <Link to="/weekend-war" className="transition hover:text-sky-400">
-                  01. Weekend War Championship
-                </Link>
-              </li>
-              <li>
-                <Link to="/daily-grind" className="transition hover:text-sky-400">
-                  02. Daily Grind Scrims
-                </Link>
-              </li>
-              <li>
-                <Link to="/points-table" className="transition hover:text-sky-400">
-                  03. Daily Scrim Points Table + MVP
-                </Link>
-              </li>
-              <li>
-                <Link to="/weekly-points" className="transition hover:text-sky-400">
-                  04. Weekly & Weekend Standings
-                </Link>
-              </li>
-              <li>
-                <Link to="/register" className="transition hover:text-sky-400">
-                  05. Elite Series Registration
-                </Link>
-              </li>
-            </ul>
           </div>
 
           {/* Legal & Support */}
