@@ -7,8 +7,13 @@ import {
   Swords,
   Trophy,
   Users,
+  Swords as SwordsIcon,
+  Sparkles,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../lib/auth-context";
+import { usePlatformData } from "../lib/shared-ui";
+import type { Tournament } from "../lib/platform-types";
 
 const categories = [
   {
@@ -94,68 +99,175 @@ const categories = [
 ];
 
 export function HomePage() {
-  return (
-    <div className="pt-24 pb-16 px-4 lg:px-8 max-w-7xl mx-auto">
-      {/* Category Index Header */}
-      <div className="mb-12 border-b border-sky-400/20 pb-6">
-        <span className="font-mono text-xs font-bold uppercase tracking-[0.24em] text-sky-400">
-          Official Category Index
-        </span>
-        <h1 className="mt-2 font-display text-5xl font-bold uppercase text-white md:text-7xl">
-          LordsEsports BGMI Arena
-        </h1>
-        <p className="mt-2 font-mono text-xs text-slate-400 max-w-2xl">
-          Select a category below to access registered lobbies, dedicated standings, squad registration, or official tournament rules.
-        </p>
-      </div>
+  const { user, openAuthModal } = useAuth();
+  const { data } = usePlatformData();
+  const navigate = useNavigate();
 
-      {/* Grid of 8 Numbered Category Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {categories.map((cat) => {
-          const Icon = cat.icon;
-          return (
-            <Link
-              key={cat.number}
-              to={cat.route}
-              className="group relative flex flex-col justify-between border border-sky-400/25 bg-slate-950 p-6 transition hover:border-sky-400 hover:bg-sky-950/20"
-            >
-              <div>
-                {/* Header: Number & Badge */}
-                <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                  <span className="font-display text-3xl font-bold text-sky-400">
-                    {cat.number}
-                  </span>
-                  <span className="border border-sky-400/40 bg-sky-500/10 px-2 py-0.5 font-mono text-[0.62rem] font-bold uppercase tracking-[0.18em] text-sky-300">
-                    {cat.badge}
-                  </span>
+  const tournaments = data?.tournaments ?? [];
+
+  function handleJoinChallenge(tournament: Tournament) {
+    if (!user) {
+      openAuthModal();
+      return;
+    }
+    navigate(`/register?tournamentId=${tournament.id}`);
+  }
+
+  return (
+    <div className="pt-24 pb-16 px-4 lg:px-8 max-w-7xl mx-auto space-y-16">
+      {/* 1. REAL-TIME ACTIVE CHALLENGES SECTION */}
+      {tournaments.length > 0 ? (
+        <section className="border-b border-sky-400/20 pb-12">
+          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between mb-8">
+            <div>
+              <span className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.24em] text-sky-400">
+                <Sparkles className="h-4 w-4 text-sky-400" /> Live Tournament Deck
+              </span>
+              <h2 className="mt-1 font-display text-4xl font-bold uppercase text-white md:text-6xl">
+                Active Challenges Arena
+              </h2>
+            </div>
+            <p className="font-mono text-xs text-slate-400 max-w-md">
+              Select any live challenge below to lock your squad, upload payment proof, and compete for prize pools.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {tournaments.map((t) => (
+              <div
+                key={t.id}
+                className="group relative flex flex-col justify-between border border-sky-400/30 bg-slate-950 p-5 transition hover:border-sky-400 hover:bg-sky-950/20"
+              >
+                <div>
+                  {/* Media Image Banner if uploaded by admin */}
+                  {t.mediaUrl ? (
+                    <div className="relative mb-4 overflow-hidden border border-sky-400/20 max-h-48">
+                      <img
+                        src={t.mediaUrl}
+                        alt={t.name}
+                        className="h-44 w-full object-cover transition duration-300 group-hover:scale-105"
+                      />
+                    </div>
+                  ) : null}
+
+                  {/* Badges & Status */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
+                    <span className="border border-sky-400/40 bg-sky-500/10 px-2.5 py-0.5 font-mono text-[0.62rem] font-bold uppercase tracking-[0.18em] text-sky-300">
+                      {t.status}
+                    </span>
+                    <span className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-green-400">
+                      Prize: {t.prize}
+                    </span>
+                  </div>
+
+                  {/* Tournament Title & Details */}
+                  <h3 className="mt-4 font-display text-3xl font-bold uppercase leading-tight text-white group-hover:text-sky-300">
+                    {t.name}
+                  </h3>
+
+                  <div className="mt-3 space-y-1.5 font-mono text-xs text-slate-300">
+                    <div className="flex justify-between border-b border-white/5 pb-1">
+                      <span className="text-slate-400">Entry Fee:</span>
+                      <span className="font-bold text-white">{t.fee}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-white/5 pb-1">
+                      <span className="text-slate-400">Slots Filled:</span>
+                      <span className="font-bold text-sky-300">
+                        {t.registered} / {t.slots} Squads
+                      </span>
+                    </div>
+                    <div className="flex justify-between border-b border-white/5 pb-1">
+                      <span className="text-slate-400">Map & Mode:</span>
+                      <span className="font-bold text-slate-200">
+                        {t.map} ({t.mode})
+                      </span>
+                    </div>
+                    <div className="flex justify-between pb-1">
+                      <span className="text-slate-400">Starts At:</span>
+                      <span className="font-bold text-slate-200">{t.starts}</span>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Icon & Title */}
-                <div className="mt-5">
-                  <Icon className="h-8 w-8 text-sky-400 transition group-hover:scale-110" />
-                  <h3 className="mt-3 font-display text-3xl font-bold uppercase leading-tight text-white group-hover:text-sky-300">
-                    {cat.title}
-                  </h3>
-                  <p className="mt-1 font-mono text-[0.68rem] uppercase tracking-[0.16em] text-sky-300">
-                    {cat.subtitle}
+                {/* Primary Action CTA */}
+                <div className="mt-6 border-t border-white/10 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => handleJoinChallenge(t)}
+                    className="flex w-full items-center justify-center gap-2 border border-sky-400 bg-sky-500/20 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-white transition hover:bg-sky-400 hover:text-black"
+                  >
+                    <SwordsIcon className="h-4 w-4" />
+                    {user ? "Join Challenge →" : "Login & Join Challenge →"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {/* 2. CATEGORY INDEX SECTION */}
+      <div>
+        <div className="mb-12 border-b border-sky-400/20 pb-6">
+          <span className="font-mono text-xs font-bold uppercase tracking-[0.24em] text-sky-400">
+            Official Category Index
+          </span>
+          <h2 className="mt-2 font-display text-5xl font-bold uppercase text-white md:text-7xl">
+            LordsEsports BGMI Arena
+          </h2>
+          <p className="mt-2 font-mono text-xs text-slate-400 max-w-2xl">
+            Select a category below to access registered lobbies, dedicated standings, squad registration, or official tournament rules.
+          </p>
+        </div>
+
+        {/* Grid of 8 Numbered Category Cards */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {categories.map((cat) => {
+            const Icon = cat.icon;
+            return (
+              <Link
+                key={cat.number}
+                to={cat.route}
+                className="group relative flex flex-col justify-between border border-sky-400/25 bg-slate-950 p-6 transition hover:border-sky-400 hover:bg-sky-950/20"
+              >
+                <div>
+                  {/* Header: Number & Badge */}
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <span className="font-display text-3xl font-bold text-sky-400">
+                      {cat.number}
+                    </span>
+                    <span className="border border-sky-400/40 bg-sky-500/10 px-2 py-0.5 font-mono text-[0.62rem] font-bold uppercase tracking-[0.18em] text-sky-300">
+                      {cat.badge}
+                    </span>
+                  </div>
+
+                  {/* Icon & Title */}
+                  <div className="mt-5">
+                    <Icon className="h-8 w-8 text-sky-400 transition group-hover:scale-110" />
+                    <h3 className="mt-3 font-display text-3xl font-bold uppercase leading-tight text-white group-hover:text-sky-300">
+                      {cat.title}
+                    </h3>
+                    <p className="mt-1 font-mono text-[0.68rem] uppercase tracking-[0.16em] text-sky-300">
+                      {cat.subtitle}
+                    </p>
+                  </div>
+
+                  {/* Description */}
+                  <p className="mt-4 font-mono text-xs leading-relaxed text-slate-400">
+                    {cat.desc}
                   </p>
                 </div>
 
-                {/* Description */}
-                <p className="mt-4 font-mono text-xs leading-relaxed text-slate-400">
-                  {cat.desc}
-                </p>
-              </div>
-
-              {/* Footer: Highlight tag */}
-              <div className="mt-6 border-t border-white/10 pt-3">
-                <span className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.2em] text-sky-300">
-                  {cat.highlight} →
-                </span>
-              </div>
-            </Link>
-          );
-        })}
+                {/* Footer: Highlight tag */}
+                <div className="mt-6 border-t border-white/10 pt-3">
+                  <span className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.2em] text-sky-300">
+                    {cat.highlight} →
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

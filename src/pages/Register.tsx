@@ -56,10 +56,14 @@ export function RegisterPage() {
   }, [user]);
 
   useEffect(() => {
-    if (!form.tournamentId && tournaments[0]?.id) {
+    const params = new URLSearchParams(window.location.search);
+    const urlTid = params.get("tournamentId");
+    if (urlTid && tournaments.some((t) => t.id === urlTid)) {
+      setForm((current) => ({ ...current, tournamentId: urlTid }));
+    } else if (!form.tournamentId && tournaments[0]?.id) {
       setForm((current) => ({ ...current, tournamentId: tournaments[0].id }));
     }
-  }, [form.tournamentId, tournaments]);
+  }, [tournaments]);
 
   const progress = ((step + 1) / registrationSteps.length) * 100;
 

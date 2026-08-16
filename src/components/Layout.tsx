@@ -234,7 +234,7 @@ export function Footer() {
 export function LayoutContent({ children }: { children: ReactNode }) {
   const sound = useSoundDesign();
   const [adminOpen, setAdminOpen] = useState(false);
-  const [authOpen, setAuthOpen] = useState(false);
+  const { authModalOpen, openAuthModal, closeAuthModal } = useAuth();
   const { data, refetch } = usePlatformData();
   const liveLabel = formatUpdatedAt(data.generatedAt);
 
@@ -270,7 +270,7 @@ export function LayoutContent({ children }: { children: ReactNode }) {
         liveLabel={liveLabel}
         muted={sound.muted}
         toggleSound={sound.toggle}
-        onOpenAuth={() => setAuthOpen(true)}
+        onOpenAuth={openAuthModal}
       />
       <main className="min-h-[calc(100vh-16rem)]">{children}</main>
       <AdminPanelModal
@@ -279,7 +279,7 @@ export function LayoutContent({ children }: { children: ReactNode }) {
         onClose={() => setAdminOpen(false)}
         onChanged={() => void refetch()}
       />
-      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+      <AuthModal open={authModalOpen} onClose={closeAuthModal} />
       <Footer />
     </div>
   );

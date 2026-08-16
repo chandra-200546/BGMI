@@ -29,6 +29,9 @@ export type UserProfile = {
 type AuthContextType = {
   user: UserProfile | null;
   userChallenges: RegisteredChallenge[];
+  authModalOpen: boolean;
+  openAuthModal: () => void;
+  closeAuthModal: () => void;
   loginWithGoogle: () => Promise<void>;
   login: (profile: UserProfile) => void;
   logout: () => void;
@@ -41,6 +44,8 @@ const DEMO_USER_KEY = "lordsesports_user_session";
 const DEMO_CHALLENGES_KEY = "lordsesports_user_challenges";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+
   const [user, setUser] = useState<UserProfile | null>(() => {
     if (typeof window === "undefined") return null;
     const saved = localStorage.getItem(DEMO_USER_KEY);
@@ -52,6 +57,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem(DEMO_CHALLENGES_KEY);
     return saved ? (JSON.parse(saved) as RegisteredChallenge[]) : [];
   });
+
+  function openAuthModal() {
+    setAuthModalOpen(true);
+  }
+
+  function closeAuthModal() {
+    setAuthModalOpen(false);
+  }
 
   // Sync Auth credentials & listen to Supabase auth state
   useEffect(() => {
@@ -92,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             bgmiUid: u.user_metadata?.bgmi_uid,
             teamName: u.user_metadata?.team_name,
           });
+          setAuthModalOpen(false);
         } else if (_event === "SIGNED_OUT") {
           setUser(null);
         }
@@ -120,10 +134,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [userChallenges]);
 
   async function loginWithGoogle() {
-    // 1. Ensure client has live server credentials
     await syncClientAuthConfig();
 
-    // 2. Perform live Supabase Google OAuth redirect
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -139,6 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   function login(profile: UserProfile) {
     setUser(profile);
+    setAuthModalOpen(false);
   }
 
   function logout() {
@@ -163,6 +176,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         userChallenges,
+        authModalOpen,
+        openAuthModal,
+        closeAuthModal,
         loginWithGoogle,
         login,
         logout,
