@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Layout } from "./Layout";
 import { HomePage } from "../pages/Home";
@@ -13,6 +14,20 @@ import { DashboardPage } from "../pages/Dashboard";
 import { TermsPage, PrivacyPage, ContactPage, AboutPage } from "../pages/TermsPrivacy";
 
 export function AppRouter() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <Layout>
+        <HomePage />
+      </Layout>
+    );
+  }
+
   return (
     <BrowserRouter>
       <Layout>

@@ -56,12 +56,14 @@ export function RegisterPage() {
   }, [user]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const urlTid = params.get("tournamentId");
-    if (urlTid && tournaments.some((t) => t.id === urlTid)) {
-      setForm((current) => ({ ...current, tournamentId: urlTid }));
-    } else if (!form.tournamentId && tournaments[0]?.id) {
-      setForm((current) => ({ ...current, tournamentId: tournaments[0].id }));
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlTid = params.get("tournamentId");
+      if (urlTid && tournaments.some((t) => t.id === urlTid)) {
+        setForm((current) => ({ ...current, tournamentId: urlTid }));
+      } else if (!form.tournamentId && tournaments[0]?.id) {
+        setForm((current) => ({ ...current, tournamentId: tournaments[0].id }));
+      }
     }
   }, [tournaments]);
 
